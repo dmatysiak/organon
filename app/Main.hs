@@ -2,44 +2,47 @@ module Main where
 
 import Options.Applicative
 import Data.Semigroup ((<>))
+import Data.Char (toUpper)
 import Lib
 
 
+data SyntaxOptions
+  = SEXPR
+  deriving (Eq, Show)
+
 data SubCommand
-  = Repl       { syntax      :: String
+  = Repl       { syntax      :: SyntaxOptions
                , infile      :: String
                , parallelize :: Bool
                , distribute  :: Bool }
-  | Verify     { syntax      :: String
+  | Verify     { syntax      :: SyntaxOptions
                , infile      :: String
                , parallelize :: Bool
                , distribute  :: Bool }
-  | Compile    { syntax      :: String
+  | Compile    { syntax      :: SyntaxOptions
                , infile      :: String
                , outfile     :: String
                , parallelize :: Bool
                , distribute  :: Bool }
-  | Synthesize { syntax      :: String
+  | Synthesize { syntax      :: SyntaxOptions
                , infile      :: String
                , outfile     :: String
                , parallelize :: Bool
                , distribute  :: Bool }
   deriving (Eq, Show)
 
-optionParallelize = switch
-                    ( long "parallelize"
-                      <> short 'p'
-                      <> help "Parallelize reasoner" )
+syntaxOptionReader :: ReadM SyntaxOptions
+syntaxOptionReader = eitherReader
+                     $ \x -> case (map toUpper x) of
+                               "SEXPR"   -> Right SEXPR
+                               otherwise -> Left ("No such syntax '" ++ x ++ "'")
 
-optionDistribute = switch
-                   ( long "distribute"
-                     <> short 'd'
-                     <> help "Distribute reasoner" )
-
-optionSyntax = strOption
+optionSyntax = option syntaxOptionReader
                ( long "syntax"
                  <> short 's'
                  <> metavar "SYNTAX"
+                 <> value SEXPR
+                 <> showDefault
                  <> help "Syntax of source file" )
 
 optionInfile = strOption
@@ -53,6 +56,16 @@ optionOutfile = strOption
                   <> short 'o'
                   <> metavar "TARGET"
                   <> help "Target file" )
+
+optionParallelize = switch
+                    ( long "parallelize"
+                      <> short 'p'
+                      <> help "Parallelize reasoner" )
+
+optionDistribute = switch
+                   ( long "distribute"
+                     <> short 'd'
+                     <> help "Distribute reasoner" )
 
 repl :: Parser SubCommand
 repl = Repl
