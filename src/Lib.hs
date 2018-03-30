@@ -67,15 +67,17 @@ teflogRepl sc@Repl{} = do
       case maybeLine of
         Nothing        -> do putStrLn "\nGoodbye!"
                              return ()
-        Just line      -> if isReplCommand line
-                          then if line == ":exit"
-                               then do putStrLn "Goodbye!"
-                                       return ()
-                               else do scNew <- handleCommandStr sc line
-                                       teflogRepl scNew
-                          else do addHistory line
-                                  putStrLn line
-                                  teflogRepl sc
+        Just line      -> if length line > 0
+                          then if isReplCommand line
+                               then if line == ":exit"
+                                    then do putStrLn "Goodbye!"
+                                            return ()
+                                    else do scNew <- handleCommandStr sc line
+                                            teflogRepl scNew
+                               else do addHistory line
+                                       putStrLn line
+                                       teflogRepl sc
+                          else do teflogRepl sc
 teflogRepl sc = do putStrLn $ "Not a REPL subcommand '" ++ (show sc) ++ "'."
 
 isReplCommand :: String -> Bool
