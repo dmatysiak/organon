@@ -2,40 +2,11 @@ module Main where
 
 import Options.Applicative
 import Data.Semigroup ((<>))
-import Data.Char (toUpper)
 import Lib
 
 
-data SyntaxOptions
-  = SEXPR
-  deriving (Eq, Show)
-
-data SubCommand
-  = Repl       { syntax      :: SyntaxOptions
-               , infile      :: String
-               , parallelize :: Bool
-               , distribute  :: Bool }
-  | Verify     { syntax      :: SyntaxOptions
-               , infile      :: String
-               , parallelize :: Bool
-               , distribute  :: Bool }
-  | Compile    { syntax      :: SyntaxOptions
-               , infile      :: String
-               , outfile     :: String
-               , parallelize :: Bool
-               , distribute  :: Bool }
-  | Synthesize { syntax      :: SyntaxOptions
-               , infile      :: String
-               , outfile     :: String
-               , parallelize :: Bool
-               , distribute  :: Bool }
-  deriving (Eq, Show)
-
 syntaxOptionReader :: ReadM SyntaxOptions
-syntaxOptionReader = eitherReader
-                     $ \x -> case (map toUpper x) of
-                               "SEXPR"   -> Right SEXPR
-                               otherwise -> Left ("No such syntax '" ++ x ++ "'")
+syntaxOptionReader = eitherReader $ parserSyntax
 
 optionSyntax = option syntaxOptionReader
                ( long "syntax"
@@ -104,11 +75,8 @@ subcommand = hsubparser
                <> command "compile"    (info compile    (progDesc "Compile source fact file"))
                <> command "synthesize" (info synthesize (progDesc "Synthesize target fact file")) )
 
-dispatchCommand :: SubCommand -> IO ()
-dispatchCommand sc = putStrLn (show sc)
-
 opts = info ( subcommand <**> helper )
-       ( fullDesc <> header "teflog" )
+       ( fullDesc <> header teflogBanner)
 
 main :: IO ()
 main = do
