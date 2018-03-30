@@ -79,7 +79,9 @@ teflogRepl sc@Repl{} = do
 teflogRepl sc = do putStrLn $ "Not a REPL subcommand '" ++ (show sc) ++ "'."
 
 isReplCommand :: String -> Bool
-isReplCommand c = c !! 0 == ':'
+isReplCommand c = if length c > 0
+                  then c !! 0 == ':'
+                  else False
 
 handleCommandStr :: SubCommand -> String -> IO SubCommand
 handleCommandStr sc c =
