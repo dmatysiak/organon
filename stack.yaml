@@ -40,7 +40,7 @@ packages:
 
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
-extra-deps: [containers-0.5.11.0, optparse-applicative-0.14.2.0, readline-1.0.3.0]
+extra-deps: [containers-0.5.11.0, optparse-applicative-0.14.2.0, parsec-3.1.13.0, readline-1.0.3.0]
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

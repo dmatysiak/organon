@@ -20,7 +20,7 @@ optionInfile = strOption
                 ( long "source"
                   <> short 'f'
                   <> metavar "SOURCE"
-                  <> help "Source file" )
+                  <> help "Source file or host" )
 
 optionOutfile = strOption
                 ( long "target"

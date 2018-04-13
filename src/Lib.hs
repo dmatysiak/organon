@@ -69,7 +69,7 @@ teflogRepl sc@Repl{} = do
                              return ()
         Just line      -> if length line > 0
                           then if isReplCommand line
-                               then if line == ":exit"
+                               then if (map toUpper line) == ":EXIT"
                                     then do putStrLn "Goodbye!"
                                             return ()
                                     else do scNew <- handleCommandStr sc line
@@ -91,8 +91,8 @@ handleCommandStr sc c =
       cmd       = head $ take 1 cmdTokens
       cmdArgs   = drop 1 cmdTokens
 
-  in case cmd of
-       ":syntax" -> let snList = take 1 cmdArgs
+  in case (map toUpper cmd) of
+       ":SYNTAX" -> let snList = take 1 cmdArgs
                         ps     =  if (length snList) > 0
                                   then parserSyntax $ head snList
                                   else Left "Missing syntax argument."
