@@ -1,5 +1,6 @@
 module Lib
   (parserSyntax
+  , parserPort
   , SyntaxOptions(..)
   , SubCommand(..)
   , dispatchCommand
@@ -7,7 +8,7 @@ module Lib
   , teflogRepl)
 where
 
-import Data.Char (toUpper)
+import Data.Char (toUpper, isDigit, digitToInt)
 import qualified Data.Map as Map
 import System.Console.Readline
 
@@ -21,6 +22,9 @@ data SubCommand
                , infile      :: String
                , parallelize :: Bool
                , distribute  :: Bool }
+  | Organon    { syntax      :: SyntaxOptions
+               , host        :: String
+               , port        :: Int }
   | Verify     { syntax      :: SyntaxOptions
                , infile      :: String
                , parallelize :: Bool
@@ -50,6 +54,18 @@ parserSyntax x =
   case (map toUpper x) of
     "SEXPR"   -> Right SEXPR
     otherwise -> Left ("No such syntax '" ++ x ++ "'")
+
+parserPort :: String -> Either String Int
+parserPort xs =
+  if (all isDigit xs)
+  then let ps = zip (map digitToInt xs) [ round $ 10 ** x | x <- reverse $ take (length xs) [0..] ]
+           n  = foldl (\x (y,z) -> x + y*z) 0 ps
+       in
+         if n > 65535 || n < 0
+         then Left ("Port number outside range (0 <= p <= 65535)")
+         else Right n
+  else Left ("Port given is not an integer")
+
 
 dispatchCommand :: SubCommand -> IO ()
 dispatchCommand sc@Repl{} = do
