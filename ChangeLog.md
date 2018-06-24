@@ -1,3 +1,3 @@
-# Changelog for teflog
+# Changelog for organon
 
 ## Unreleased changes

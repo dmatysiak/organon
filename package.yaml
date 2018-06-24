@@ -1,10 +1,10 @@
-name:                teflog
+name:                organon
 version:             0.1.0.0
-github:              "githubuser/teflog"
+github:              "dmatysiak/organon"
 license:             BSD3
-author:              "Author name here"
-maintainer:          "example@example.com"
-copyright:           "2018 Author name here"
+author:              "Daniel A. Matysiak"
+#maintainer:          "example@example.com"
+copyright:           "2018 Daniel A. Matysiak"
 
 extra-source-files:
 - README.md
@@ -17,7 +17,7 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on Github at <https://github.com/githubuser/teflog#readme>
+description:         Please see the README on Github at <https://github.com/dmatysiak/organon#readme>
 
 dependencies:
 - base >= 4.7 && < 5
@@ -30,7 +30,7 @@ library:
   source-dirs: src
 
 executables:
-  teflog:
+  organon:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
@@ -38,10 +38,10 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - teflog
+    - organon
 
 tests:
-  teflog-test:
+  organon-test:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
@@ -49,4 +49,4 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - teflog
+    - organon

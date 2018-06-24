@@ -2,7 +2,7 @@ module Main where
 
 import Options.Applicative
 import Data.Semigroup ((<>))
-import Lib
+import CommandOptions
 
 
 syntaxOptionReader :: ReadM SyntaxOptions
@@ -61,8 +61,8 @@ repl :: Parser SubCommand
 repl = Repl
        <$> optionSyntax
        <*> optionInfile
-       <*> optionParallelize
-       <*> optionDistribute
+       -- <*> optionParallelize
+       -- <*> optionDistribute
 
 organon :: Parser SubCommand
 organon = Organon
@@ -96,13 +96,14 @@ synthesize = Synthesize
 subcommand :: Parser SubCommand
 subcommand = hsubparser
              ( command "repl"          (info repl       (progDesc "Start REPL"))
-               <> command "organon"    (info organon    (progDesc "Connect to Organon instance"))
-               <> command "verify"     (info verify     (progDesc "Verify fact source file"))
-               <> command "compile"    (info compile    (progDesc "Compile source fact file"))
-               <> command "synthesize" (info synthesize (progDesc "Synthesize target fact file")) )
+             --  <> command "organon"    (info organon    (progDesc "Connect to Organon instance"))
+             --  <> command "verify"     (info verify     (progDesc "Verify fact source file"))
+             --  <> command "compile"    (info compile    (progDesc "Compile source fact file"))
+             --  <> command "synthesize" (info synthesize (progDesc "Synthesize target fact file"))
+             )
 
 opts = info ( subcommand <**> helper )
-       ( fullDesc <> header teflogBanner)
+       ( fullDesc <> header organonBanner)
 
 main :: IO ()
 main = do

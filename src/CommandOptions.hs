@@ -1,11 +1,11 @@
-module Lib
+module CommandOptions
   (parserSyntax
   , parserPort
   , SyntaxOptions(..)
   , SubCommand(..)
   , dispatchCommand
-  , teflogBanner
-  , teflogRepl)
+  , organonBanner
+  , organonRepl)
 where
 
 import Data.Char (toUpper, isDigit, digitToInt)
@@ -15,13 +15,15 @@ import System.Console.Readline
 
 data SyntaxOptions
   = SEXPR
+  | ALGEB
   deriving (Eq, Ord, Show)
 
 data SubCommand
   = Repl       { syntax      :: SyntaxOptions
                , infile      :: String
-               , parallelize :: Bool
-               , distribute  :: Bool }
+               -- , parallelize :: Bool
+               -- , distribute  :: Bool
+               }
   | Organon    { syntax      :: SyntaxOptions
                , host        :: String
                , port        :: Int }
@@ -42,17 +44,18 @@ data SubCommand
   deriving (Eq, Show)
 
 
-teflogBanner :: String
-teflogBanner = "teflog 0.1.0.0\n"
+organonBanner :: String
+organonBanner = "organon 0.1.0.0\n"
 
-teflogParsers :: Map.Map SyntaxOptions SyntaxOptions -- change to parser type
-teflogParsers = Map.fromList [(SEXPR, SEXPR)]
+organonParsers :: Map.Map SyntaxOptions SyntaxOptions -- change second SyntaxOptions to parser type
+organonParsers = Map.fromList [(SEXPR, SEXPR)]
 
 
 parserSyntax :: String -> Either String SyntaxOptions
 parserSyntax x =
   case (map toUpper x) of
     "SEXPR"   -> Right SEXPR
+    "ALGEB"   -> Right ALGEB
     otherwise -> Left ("No such syntax '" ++ x ++ "'")
 
 parserPort :: String -> Either String Int
@@ -69,13 +72,13 @@ parserPort xs =
 
 dispatchCommand :: SubCommand -> IO ()
 dispatchCommand sc@Repl{} = do
-  putStrLn teflogBanner
-  teflogRepl sc
+  putStrLn organonBanner
+  organonRepl sc
 dispatchCommand _ = putStrLn "No such command."
 
-teflogRepl :: SubCommand -> IO ()
-teflogRepl sc@Repl{} = do
-  maybeParser <- return $ Map.lookup (syntax sc) teflogParsers
+organonRepl :: SubCommand -> IO ()
+organonRepl sc@Repl{} = do
+  maybeParser <- return $ Map.lookup (syntax sc) organonParsers
   case maybeParser of
     Nothing -> putStrLn ("No parser found for given syntax '" ++ (show $ syntax sc) ++ "'. Aborting...")
     Just p  -> do
@@ -89,12 +92,12 @@ teflogRepl sc@Repl{} = do
                                     then do putStrLn "Goodbye!"
                                             return ()
                                     else do scNew <- handleCommandStr sc line
-                                            teflogRepl scNew
+                                            organonRepl scNew
                                else do addHistory line
                                        putStrLn line
-                                       teflogRepl sc
-                          else do teflogRepl sc
-teflogRepl sc = do putStrLn $ "Not a REPL subcommand '" ++ (show sc) ++ "'."
+                                       organonRepl sc
+                          else do organonRepl sc
+organonRepl sc = do putStrLn $ "Not a REPL subcommand '" ++ (show sc) ++ "'."
 
 isReplCommand :: String -> Bool
 isReplCommand c = if length c > 0
@@ -115,8 +118,9 @@ handleCommandStr sc c =
                     in case ps of
                          Right sn -> do return $ Repl { syntax      = sn
                                                       , infile      = infile sc
-                                                      , parallelize = parallelize sc
-                                                      , distribute  = distribute sc }
+                                                      --, parallelize = parallelize sc
+                                                      --, distribute  = distribute sc
+                                                      }
                          Left msg -> do putStrLn msg
                                         return sc
        otherwise -> do putStrLn $ "Not a REPL command '" ++ cmd ++ "'"
