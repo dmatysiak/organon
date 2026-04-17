@@ -1,0 +1,29 @@
+-- Strict tradition: only the 15 unconditionally valid moods.
+-- No existential import, no subaltern moods.
+
+tradition Strict
+
+proof Barbara
+  Every M is P
+  Every S is M
+  ∴ Every S is P.
+
+proof Celarent
+  No M is P
+  Every S is M
+  ∴ No S is P.
+
+proof Cesare
+  No P is M
+  Every S is M
+  ∴ No S is P.
+
+proof Baroco
+  Every P is M
+  Some S is not M
+  ∴ Some S is not P.
+
+proof Bocardo
+  Some M is not P
+  Every M is S
+  ∴ Some S is not P.

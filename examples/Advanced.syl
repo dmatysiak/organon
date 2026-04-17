@@ -1,0 +1,18 @@
+-- Building on Basics with cross-file references.
+
+open Basics
+
+proof FromBarbara
+  @Barbara
+  No P is S
+  ∴ No P is S.
+
+proof FromCesare
+  @Cesare
+  Every P is S
+  ∴ Some S is P.
+
+proof QualifiedRef
+  @Basics.Darii
+  No P is S
+  ∴ Some S is not P.

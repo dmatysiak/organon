@@ -1,0 +1,136 @@
+cabal-version: 2.2
+
+-- This file has been generated from package.yaml by hpack version 0.37.0.
+--
+-- see: https://github.com/sol/hpack
+
+name:           organon-syl
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/githubuser/organon-syl#readme>
+homepage:       https://github.com/githubuser/organon-syl#readme
+bug-reports:    https://github.com/githubuser/organon-syl/issues
+author:         Author name here
+maintainer:     example@example.com
+copyright:      2026 Author name here
+license:        BSD-3-Clause
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    CHANGELOG.md
+
+source-repository head
+  type: git
+  location: https://github.com/githubuser/organon-syl
+
+library
+  exposed-modules:
+      Organon.Syl.Check
+      Organon.Syl.Document
+      Organon.Syl.Hole
+      Organon.Syl.Lsp
+      Organon.Syl.Pretty
+      Organon.Syl.Proof
+      Organon.Syl.Proposition
+      Organon.Syl.Repl
+      Organon.Syl.Tradition
+      Organon.Syl.Types
+      Organon.Syl.Validity
+  other-modules:
+      Paths_organon_syl
+  autogen-modules:
+      Paths_organon_syl
+  hs-source-dirs:
+      src
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
+  build-depends:
+      base >=4.7 && <5
+    , co-log-core
+    , containers
+    , directory
+    , filepath
+    , haskeline
+    , lsp
+    , lsp-types
+    , megaparsec
+    , parser-combinators
+    , stm
+    , text
+  default-language: Haskell2010
+
+executable organon-syl-lsp
+  main-is: Main.hs
+  other-modules:
+      Paths_organon_syl
+  autogen-modules:
+      Paths_organon_syl
+  hs-source-dirs:
+      app/lsp
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , co-log-core
+    , containers
+    , directory
+    , filepath
+    , haskeline
+    , lsp
+    , lsp-types
+    , megaparsec
+    , organon-syl
+    , parser-combinators
+    , stm
+    , text
+  default-language: Haskell2010
+
+executable organon-syl-repl
+  main-is: Main.hs
+  other-modules:
+      Paths_organon_syl
+  autogen-modules:
+      Paths_organon_syl
+  hs-source-dirs:
+      app/repl
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , co-log-core
+    , containers
+    , directory
+    , filepath
+    , haskeline
+    , lsp
+    , lsp-types
+    , megaparsec
+    , organon-syl
+    , parser-combinators
+    , stm
+    , text
+  default-language: Haskell2010
+
+test-suite organon-syl-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_organon_syl
+  autogen-modules:
+      Paths_organon_syl
+  hs-source-dirs:
+      test
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , co-log-core
+    , containers
+    , directory
+    , filepath
+    , haskeline
+    , hspec
+    , lsp
+    , lsp-types
+    , megaparsec
+    , organon-syl
+    , parser-combinators
+    , stm
+    , text
+  default-language: Haskell2010

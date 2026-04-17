@@ -1,0 +1,43 @@
+-- Fundamental syllogisms in all four figures.
+
+tradition Full
+
+proof Barbara
+  Every M is P
+  Every S is M
+  ∴ Every S is P.
+
+proof Celarent
+  No M is P
+  Every S is M
+  ∴ No S is P.
+
+proof Darii
+  Every M is P
+  Some S is M
+  ∴ Some S is P.
+
+proof Ferio
+  No M is P
+  Some S is M
+  ∴ Some S is not P.
+
+proof Cesare
+  No P is M
+  Every S is M
+  ∴ No S is P.
+
+proof Camestres
+  Every P is M
+  No S is M
+  ∴ No S is P.
+
+proof Darapti
+  Every M is P
+  Every M is S
+  ∴ Some S is P.
+
+proof Bramantip
+  Every P is M
+  Every M is S
+  ∴ Some S is P.

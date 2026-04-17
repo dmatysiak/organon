@@ -1,0 +1,75 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Syllogistic",
+  "scopeName": "source.syl",
+  "fileTypes": ["syl"],
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#tradition" },
+    { "include": "#open-directive" },
+    { "include": "#proof-header" },
+    { "include": "#conclusion-marker" },
+    { "include": "#qualified-reference" },
+    { "include": "#reference" },
+    { "include": "#quantifier" },
+    { "include": "#copula" },
+    { "include": "#period" }
+  ],
+  "repository": {
+    "comment": {
+      "match": "--.*$",
+      "name": "comment.line.double-dash.syl"
+    },
+    "tradition": {
+      "match": "^(tradition)\\s+(Strict|Traditional|Full)\\b",
+      "captures": {
+        "1": { "name": "keyword.control.tradition.syl" },
+        "2": { "name": "constant.language.tradition.syl" }
+      }
+    },
+    "open-directive": {
+      "match": "^(open)\\s+(\\S+)",
+      "captures": {
+        "1": { "name": "keyword.control.open.syl" },
+        "2": { "name": "entity.name.namespace.syl" }
+      }
+    },
+    "proof-header": {
+      "match": "^(proof)\\s+(\\S+)",
+      "captures": {
+        "1": { "name": "keyword.control.proof.syl" },
+        "2": { "name": "entity.name.function.proof.syl" }
+      }
+    },
+    "conclusion-marker": {
+      "match": "∴|\\btherefore\\b",
+      "name": "keyword.operator.conclusion.syl"
+    },
+    "qualified-reference": {
+      "match": "(@)(\\S+?)\\.(\\S+)",
+      "captures": {
+        "1": { "name": "punctuation.definition.reference.syl" },
+        "2": { "name": "entity.name.namespace.syl" },
+        "3": { "name": "variable.other.reference.syl" }
+      }
+    },
+    "reference": {
+      "match": "@(\\S+)",
+      "captures": {
+        "0": { "name": "variable.other.reference.syl" }
+      }
+    },
+    "quantifier": {
+      "match": "\\b(Every|No|Some)\\b",
+      "name": "keyword.other.quantifier.syl"
+    },
+    "copula": {
+      "match": "\\b(is\\s+not|is)\\b",
+      "name": "keyword.other.copula.syl"
+    },
+    "period": {
+      "match": "\\.$",
+      "name": "punctuation.terminator.syl"
+    }
+  }
+}
