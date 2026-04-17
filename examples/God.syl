@@ -1,0 +1,136 @@
+-- Feser's Aristotelian Proof (m.m. "Five Proofs", ch. 1)
+--
+-- That the reality of change requires a purely actual actualizer
+-- — a being with no unactualized potentials — which is what
+-- classical theism calls God.
+--
+-- Each proof block is a valid categorical syllogism. Premises
+-- that encode non-syllogistic philosophical arguments (e.g. the
+-- impossibility of infinite essentially ordered regress) are
+-- asserted directly and explained in comments.
+
+tradition Full
+
+-- STAGE 1: THE NATURE OF CHANGE
+--
+-- Change is the actualization of a potential by something
+-- already actual. A thing cannot actualize its own potential
+-- (in the same respect and at the same time), so whatever
+-- changes is being actualized by another.
+
+proof ChangeIsActualization
+  every HavingPotentialActualized is ActualizedByAnother
+  every Changing is HavingPotentialActualized
+  ∴ every Changing is ActualizedByAnother
+
+-- STAGE 2: THE REGRESS ARGUMENT
+--
+-- An essentially ordered causal series (one in which each
+-- intermediate member has only derivative causal power)
+-- cannot proceed to infinity. It requires a first member
+-- whose causal power is underived.
+
+proof SeriesRequiresFirst
+  every InEssentiallyOrderedSeries is DependentOnFirst
+  every ActualizedByAnother is InEssentiallyOrderedSeries
+  ∴ every ActualizedByAnother is DependentOnFirst
+
+-- Combining: whatever changes depends on a first actualizer.
+
+proof ChangingDependsOnFirst
+  @SeriesRequiresFirst
+  @ChangeIsActualization
+  ∴ every Changing is DependentOnFirst
+
+-- STAGE 3: FROM CHANGE TO EXISTENCE
+--
+-- Some things really do change (to deny this is self-refuting).
+-- Together with the chain above: some being depends on a first
+-- actualizer.
+
+proof SomeThingsChange
+  @ChangingDependsOnFirst
+  some Being is Changing
+  ∴ some Being is DependentOnFirst
+
+-- The first actualizer has no unactualized potentials (else it
+-- would require a prior actualizer and not be first). So it
+-- is purely actual.
+--
+-- That some beings depend on a first actualizer entails that
+-- such a first actualizer exists. "some Being is FirstActualizer"
+-- is an assumed premise grounded in the anti-regress argument.
+
+proof FirstIsPurelyActual
+  every FirstActualizer is PurelyActual
+  some Being is FirstActualizer
+  ∴ some Being is PurelyActual
+
+-- STAGE 4: DIVINE ATTRIBUTES
+--
+-- From pure actuality the classical divine attributes follow.
+-- Each is derived from the absence of all potentiality.
+
+-- No potentiality entails no capacity for change.
+proof PurelyActualIsImmutable
+  every non-Potential is Immutable
+  every PurelyActual is non-Potential
+  ∴ every PurelyActual is Immutable
+
+-- What cannot change is outside of time.
+proof PurelyActualIsEternal
+  every Immutable is Eternal
+  @PurelyActualIsImmutable
+  ∴ every PurelyActual is Eternal
+
+-- Matter involves potentiality; a purely actual being is
+-- therefore not material.
+proof PurelyActualIsImmaterial
+  every Material is Potential
+  no PurelyActual is Potential
+  ∴ no PurelyActual is Material
+
+-- Lacking no actuality, a purely actual being is perfect.
+proof PurelyActualIsPerfect
+  every FullyActual is Perfect
+  every PurelyActual is FullyActual
+  ∴ every PurelyActual is Perfect
+
+-- If two purely actual beings existed, they would need to
+-- differ in some respect. Differing requires that one lacks
+-- what the other has — i.e. has unactualized potential —
+-- contradicting pure actuality.
+proof PurelyActualIsUnique
+  every non-Differentiable is Unique
+  every PurelyActual is non-Differentiable
+  ∴ every PurelyActual is Unique
+
+-- STAGE 5: EXISTENTIAL CONCLUSIONS
+--
+-- Applying the existential result (some being is purely actual)
+-- to each attribute.
+
+proof SomeBeingIsImmutable
+  @PurelyActualIsImmutable
+  @FirstIsPurelyActual
+  ∴ some Being is Immutable
+
+proof SomeBeingIsEternal
+  @PurelyActualIsEternal
+  @FirstIsPurelyActual
+  ∴ some Being is Eternal
+
+proof SomeBeingIsImmaterial
+  @PurelyActualIsImmaterial
+  @FirstIsPurelyActual
+  ∴ some Being is not Material
+
+proof SomeBeingIsPerfect
+  @PurelyActualIsPerfect
+  @FirstIsPurelyActual
+  ∴ some Being is Perfect
+
+proof SomeBeingIsUnique
+  @PurelyActualIsUnique
+  @FirstIsPurelyActual
+  ∴ some Being is Unique

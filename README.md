@@ -25,6 +25,13 @@ organon-syl> :prove every M is P; every S is M; every S is P
 Reduction of Barbara:
   1. Axiom: Barbara (perfect syllogism)
 
+organon-syl> :prove every P is M; no S is M; no S is P
+Reduction of Camestres:
+  1. Simple conversion: no S is M → no M is S
+  2. Mutate: swap major and minor premises
+  3. Axiom: Celarent (perfect syllogism)
+  4. Simple conversion: no P is S → no S is P
+
 organon-syl> :solve every M is P; every S is M; ?
 2 solutions found:
   Barbara (Figure 1): every S is P
