@@ -87,10 +87,11 @@ checkFiles files = do
         pure [FileEntry fp (namespaceFromPath fp) doc]
   -- Phase 2: first pass — check all files without cross-file context
   -- to collect conclusions, then re-check with full context.
-  let firstPass = Map.fromList
-        [ (feNamespace fe, checkDocument Map.empty (feDocument fe))
-          | fe <- entries
-        ]
+  let firstPass =
+        Map.fromList
+          [ (feNamespace fe, checkDocument Map.empty (feDocument fe))
+            | fe <- entries
+          ]
       extContext =
         Map.fromList
           [ ( feNamespace fe,
@@ -114,9 +115,13 @@ checkFiles files = do
     forM_ diags $ \d ->
       putStrLn $ formatDiag (fePath fe) d
     forM_ fills $ \fill ->
-      putStrLn $ fePath fe ++ ": solution: "
-        ++ T.unpack (holeFillLabel fill)
-        ++ " (" ++ T.unpack (prettyMood (holeFillMood fill)) ++ ")"
+      putStrLn $
+        fePath fe
+          ++ ": solution: "
+          ++ T.unpack (holeFillLabel fill)
+          ++ " ("
+          ++ T.unpack (prettyMood (holeFillMood fill))
+          ++ ")"
     when (null diags && null fills) $
       pure ()
     pure (fePath fe, result, diags)
@@ -125,10 +130,14 @@ checkFiles files = do
 -- | Format a diagnostic in the standard file:line:col format.
 formatDiag :: FilePath -> Diagnostic -> String
 formatDiag fp d =
-  fp ++ ":"
-    ++ show (posLine (diagStart d)) ++ ":"
-    ++ show (posCol (diagStart d)) ++ ": "
-    ++ severityStr (diagSeverity d) ++ ": "
+  fp
+    ++ ":"
+    ++ show (posLine (diagStart d))
+    ++ ":"
+    ++ show (posCol (diagStart d))
+    ++ ": "
+    ++ severityStr (diagSeverity d)
+    ++ ": "
     ++ T.unpack (diagMessage d)
 
 severityStr :: Severity -> String

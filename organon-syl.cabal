@@ -6,7 +6,9 @@ cabal-version: 2.2
 
 name:           organon-syl
 version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/githubuser/organon-syl#readme>
+synopsis:       A proof assistant for medieval syllogistic logic.
+description:    Please see the README on GitHub at <https://github.com/dmatysiak/organon-syl#readme>
+category:       Theorem Provers, Logic, Formal Methods
 homepage:       https://github.com/dmatysiak/organon-syl#readme
 bug-reports:    https://github.com/dmatysiak/organon-syl/issues
 author:         Daniel A. Matysiak
