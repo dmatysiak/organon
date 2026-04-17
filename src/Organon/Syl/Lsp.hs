@@ -631,12 +631,12 @@ canonicalizeTherefore line =
 -- Lines that are indented and start with a proposition keyword (Every, No,
 -- Some), a conclusion marker (∴), or a reference (@) get their indentation
 -- set to two spaces and runs of internal whitespace collapsed to single
--- spaces.
+-- spaces. Quantifier keywords are lowercased to canonical form.
 normalizePropositions :: [T.Text] -> [T.Text]
 normalizePropositions = map normalizeLine
   where
     normalizeLine line
-      | isPropositionLine line = "  " <> (T.unwords . T.words . T.strip) line
+      | isPropositionLine line = "  " <> canonicalizeQuantifier ((T.unwords . T.words . T.strip) line)
       | otherwise = line
     isPropositionLine line =
       let stripped = T.stripStart line
@@ -645,6 +645,18 @@ normalizePropositions = map normalizeLine
             && any
               (`T.isPrefixOf` T.toLower stripped)
               ["every ", "no ", "some ", "∴ ", "@"]
+    canonicalizeQuantifier t
+      | Just rest <- stripPrefixCI "every " t = "every " <> rest
+      | Just rest <- stripPrefixCI "no " t = "no " <> rest
+      | Just rest <- stripPrefixCI "some " t = "some " <> rest
+      | Just rest <- T.stripPrefix "∴ " t =
+          "∴ " <> canonicalizeQuantifier rest
+      | otherwise = t
+    stripPrefixCI pfx txt =
+      let n = T.length pfx
+       in if T.toLower (T.take n txt) == pfx
+            then Just (T.drop n txt)
+            else Nothing
 
 -- | Collapse consecutive blank lines into a single blank line.
 collapseBlankLines :: [T.Text] -> [T.Text]

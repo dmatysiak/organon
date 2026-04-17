@@ -60,7 +60,7 @@
       }
     },
     "quantifier": {
-      "match": "\\b(Every|No|Some)\\b",
+      "match": "(?i)\\b(every|no|some)\\b",
       "name": "keyword.other.quantifier.syl"
     },
     "copula": {

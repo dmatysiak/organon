@@ -3,9 +3,9 @@
     "prefix": "proof",
     "body": [
       "proof ${1:Name}",
-      "  ${2:Every M is P}",
-      "  ${3:Every S is M}",
-      "  ∴ ${4:Every S is P}.",
+      "  ${2:every M is P}",
+      "  ${3:every S is M}",
+      "  ∴ ${4:every S is P}",
       ""
     ],
     "description": "Insert a proof block with two premises and a conclusion"
@@ -22,22 +22,22 @@
   },
   "Universal affirmative (A)": {
     "prefix": "every",
-    "body": "Every ${1:S} is ${2:P}",
-    "description": "Every S is P"
+    "body": "every ${1:S} is ${2:P}",
+    "description": "every S is P"
   },
   "Universal negative (E)": {
     "prefix": "no",
-    "body": "No ${1:S} is ${2:P}",
-    "description": "No S is P"
+    "body": "no ${1:S} is ${2:P}",
+    "description": "no S is P"
   },
   "Particular affirmative (I)": {
     "prefix": "someis",
-    "body": "Some ${1:S} is ${2:P}",
-    "description": "Some S is P"
+    "body": "some ${1:S} is ${2:P}",
+    "description": "some S is P"
   },
   "Particular negative (O)": {
     "prefix": "someisnot",
-    "body": "Some ${1:S} is not ${2:P}",
-    "description": "Some S is not P"
+    "body": "some ${1:S} is not ${2:P}",
+    "description": "some S is not P"
   }
 }

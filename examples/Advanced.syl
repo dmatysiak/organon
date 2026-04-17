@@ -4,8 +4,8 @@ open Basics
 
 proof FromBarbara
   @Barbara
-  No P is S
-  ∴ No P is S. 
+  no P is S
+  ∴ no P is S
 
 proof FromCesare
   @Cesare
@@ -16,3 +16,4 @@ proof QualifiedRef
   @Basics.Darii
   no P is S
   ∴ some S is not P
+
