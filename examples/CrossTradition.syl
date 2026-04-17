@@ -9,14 +9,14 @@ open Strict
 proof ExtendedBaroco
   @Baroco
   Every P is M
-  ∴ Some P is not P.
+  ∴ Some P is not P
 
 proof Darapti
   Every M is P
   Every M is S
-  ∴ Some S is P.
+  ∴ Some S is P
 
 proof MixedRefs
   @Strict.Barbara
   @Darapti
-  ∴ Some S is P.
+  ∴ Some S is P

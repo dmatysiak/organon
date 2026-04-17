@@ -403,7 +403,7 @@ main = hspec $ do
 
   describe "Document parser" $ do
     it "parses a single proof block" $
-      case parseDocument "proof Barbara\nEvery M is P\nEvery S is M\n∴ Every S is P.\n" of
+      case parseDocument "proof Barbara\nEvery M is P\nEvery S is M\n∴ Every S is P\n" of
         Right doc -> do
           docTradition doc `shouldBe` Nothing
           length (docProofs doc) `shouldBe` 1
@@ -413,13 +413,13 @@ main = hspec $ do
         Left err -> expectationFailure err
 
     it "parses tradition directive" $
-      case parseDocument "tradition Strict\n\nproof Barbara\nEvery M is P\nEvery S is M\n∴ Every S is P.\n" of
+      case parseDocument "tradition Strict\n\nproof Barbara\nEvery M is P\nEvery S is M\n∴ Every S is P\n" of
         Right doc ->
           fmap locValue (docTradition doc) `shouldBe` Just Strict
         Left err -> expectationFailure err
 
     it "parses @reference premises" $
-      case parseDocument "proof A\nEvery M is P\nEvery S is M\n∴ Every S is P.\n\nproof B\n@A\nNo S is P\n∴ No S is P.\n" of
+      case parseDocument "proof A\nEvery M is P\nEvery S is M\n∴ Every S is P\n\nproof B\n@A\nNo S is P\n∴ No S is P\n" of
         Right doc -> do
           length (docProofs doc) `shouldBe` 2
           let block2 = locValue (docProofs doc !! 1)
@@ -429,7 +429,7 @@ main = hspec $ do
         Left err -> expectationFailure err
 
     it "parses 'therefore' as conclusion marker" $
-      case parseDocument "proof Barbara\nEvery M is P\nEvery S is M\ntherefore Every S is P.\n" of
+      case parseDocument "proof Barbara\nEvery M is P\nEvery S is M\ntherefore Every S is P\n" of
         Right doc -> length (docProofs doc) `shouldBe` 1
         Left err -> expectationFailure err
 
@@ -439,26 +439,26 @@ main = hspec $ do
         Right _ -> expectationFailure "Should have failed to parse"
 
     it "handles line comments" $
-      case parseDocument "-- A comment\nproof Barbara\nEvery M is P\nEvery S is M\n∴ Every S is P.\n" of
+      case parseDocument "-- A comment\nproof Barbara\nEvery M is P\nEvery S is M\n∴ Every S is P\n" of
         Right doc -> length (docProofs doc) `shouldBe` 1
         Left err -> expectationFailure err
 
     it "parses open directives" $
-      case parseDocument "open Basics\n\nproof Step1\nEvery M is P\nEvery S is M\n∴ Every S is P.\n" of
+      case parseDocument "open Basics\n\nproof Step1\nEvery M is P\nEvery S is M\n∴ Every S is P\n" of
         Right doc -> do
           length (docOpens doc) `shouldBe` 1
           locValue (head (docOpens doc)) `shouldBe` "Basics"
         Left err -> expectationFailure err
 
     it "parses multiple open directives" $
-      case parseDocument "open Basics\nopen Advanced\n\nproof Step1\nEvery M is P\nEvery S is M\n∴ Every S is P.\n" of
+      case parseDocument "open Basics\nopen Advanced\n\nproof Step1\nEvery M is P\nEvery S is M\n∴ Every S is P\n" of
         Right doc -> do
           length (docOpens doc) `shouldBe` 2
           map locValue (docOpens doc) `shouldBe` ["Basics", "Advanced"]
         Left err -> expectationFailure err
 
     it "parses qualified @Ns.Name references" $
-      case parseDocument "proof Step1\n@Basics.Barbara\nEvery S is M\n∴ Every S is P.\n" of
+      case parseDocument "proof Step1\n@Basics.Barbara\nEvery S is M\n∴ Every S is P\n" of
         Right doc -> do
           let block = locValue (head (docProofs doc))
           case locValue (head (proofPremises block)) of
@@ -469,7 +469,7 @@ main = hspec $ do
         Left err -> expectationFailure err
 
     it "parses unqualified @Name as PremiseRef Nothing" $
-      case parseDocument "proof Step1\n@Barbara\nEvery S is M\n∴ Every S is P.\n" of
+      case parseDocument "proof Step1\n@Barbara\nEvery S is M\n∴ Every S is P\n" of
         Right doc -> do
           let block = locValue (head (docProofs doc))
           case locValue (head (proofPremises block)) of
@@ -479,7 +479,7 @@ main = hspec $ do
 
   describe "Document checker" $ do
     it "checks a valid Barbara syllogism" $
-      case parseDocument "proof Barbara\nEvery M is P\nEvery S is M\n∴ Every S is P.\n" of
+      case parseDocument "proof Barbara\nEvery M is P\nEvery S is M\n∴ Every S is P\n" of
         Right doc -> do
           let result = checkDocument Map.empty doc
           checkDiagnostics result `shouldBe` []
@@ -488,7 +488,7 @@ main = hspec $ do
         Left err -> expectationFailure err
 
     it "reports error for invalid syllogism" $
-      case parseDocument "proof Bad\nEvery M is P\nEvery S is P\n∴ Every S is M.\n" of
+      case parseDocument "proof Bad\nEvery M is P\nEvery S is P\n∴ Every S is M\n" of
         Right doc -> do
           let result = checkDocument Map.empty doc
           checkDiagnostics result `shouldSatisfy` (not . null)
@@ -496,7 +496,7 @@ main = hspec $ do
         Left err -> expectationFailure err
 
     it "resolves @references to prior conclusions" $
-      case parseDocument "proof Step1\nEvery M is P\nEvery S is M\n∴ Every S is P.\n\nproof Step2\n@Step1\nEvery P is M\n∴ Every S is M.\n" of
+      case parseDocument "proof Step1\nEvery M is P\nEvery S is M\n∴ Every S is P\n\nproof Step2\n@Step1\nEvery P is M\n∴ Every S is M\n" of
         Right doc -> do
           let result = checkDocument Map.empty doc
           -- Step1 valid, Step2 uses its conclusion
@@ -504,28 +504,28 @@ main = hspec $ do
         Left err -> expectationFailure err
 
     it "reports error for unknown reference" $
-      case parseDocument "proof Bad\n@NoSuchProof\nEvery S is M\n∴ Every S is P.\n" of
+      case parseDocument "proof Bad\n@NoSuchProof\nEvery S is M\n∴ Every S is P\n" of
         Right doc -> do
           let result = checkDocument Map.empty doc
           checkDiagnostics result `shouldSatisfy` any (\d -> "Unknown reference" `T.isInfixOf` diagMessage d)
         Left err -> expectationFailure err
 
     it "reports error for duplicate proof name" $
-      case parseDocument "proof Dup\nEvery M is P\nEvery S is M\n∴ Every S is P.\n\nproof Dup\nNo M is P\nEvery S is M\n∴ No S is P.\n" of
+      case parseDocument "proof Dup\nEvery M is P\nEvery S is M\n∴ Every S is P\n\nproof Dup\nNo M is P\nEvery S is M\n∴ No S is P\n" of
         Right doc -> do
           let result = checkDocument Map.empty doc
           checkDiagnostics result `shouldSatisfy` any (\d -> "Duplicate" `T.isInfixOf` diagMessage d)
         Left err -> expectationFailure err
 
     it "reports error for wrong premise count" $
-      case parseDocument "proof Bad\nEvery M is P\n∴ Every S is P.\n" of
+      case parseDocument "proof Bad\nEvery M is P\n∴ Every S is P\n" of
         Right doc -> do
           let result = checkDocument Map.empty doc
           checkDiagnostics result `shouldSatisfy` any (\d -> "Expected 2 premises" `T.isInfixOf` diagMessage d)
         Left err -> expectationFailure err
 
     it "respects tradition directive" $
-      case parseDocument "tradition Strict\n\nproof Bramantip\nEvery P is M\nEvery M is S\n∴ Some S is P.\n" of
+      case parseDocument "tradition Strict\n\nproof Bramantip\nEvery P is M\nEvery M is S\n∴ Some S is P\n" of
         Right doc -> do
           let result = checkDocument Map.empty doc
           -- Bramantip requires existential import, not in Strict
@@ -533,14 +533,14 @@ main = hspec $ do
         Left err -> expectationFailure err
 
     it "produces hover items for proof names" $
-      case parseDocument "proof Barbara\nEvery M is P\nEvery S is M\n∴ Every S is P.\n" of
+      case parseDocument "proof Barbara\nEvery M is P\nEvery S is M\n∴ Every S is P\n" of
         Right doc -> do
           let result = checkDocument Map.empty doc
           checkHovers result `shouldSatisfy` any (\h -> "Barbara" `elem` words' (hoverText h))
         Left err -> expectationFailure err
 
     it "produces hover items for @references" $
-      case parseDocument "proof Step1\nEvery M is P\nEvery S is M\n∴ Every S is P.\n\nproof Step2\n@Step1\nEvery P is M\n∴ Every S is M.\n" of
+      case parseDocument "proof Step1\nEvery M is P\nEvery S is M\n∴ Every S is P\n\nproof Step2\n@Step1\nEvery P is M\n∴ Every S is M\n" of
         Right doc -> do
           let result = checkDocument Map.empty doc
           checkHovers result `shouldSatisfy` any (\h -> "Every S is P" `elem` segments (hoverText h))
@@ -554,7 +554,7 @@ main = hspec $ do
                 Map.singleton "Barbara" (Proposition A m p),
                 Map.singleton "Barbara" (SrcPos 1 7, SrcPos 1 14)
               )
-       in case parseDocument "proof Step1\n@Basics.Barbara\nEvery S is M\n∴ Every S is P.\n" of
+       in case parseDocument "proof Step1\n@Basics.Barbara\nEvery S is M\n∴ Every S is P\n" of
             Right doc -> do
               let result = checkDocument ext doc
               checkDiagnostics result `shouldSatisfy` null
@@ -568,21 +568,21 @@ main = hspec $ do
                 Map.singleton "Barbara" (Proposition A m p),
                 Map.singleton "Barbara" (SrcPos 1 7, SrcPos 1 14)
               )
-       in case parseDocument "open Basics\n\nproof Step1\n@Barbara\nEvery S is M\n∴ Every S is P.\n" of
+       in case parseDocument "open Basics\n\nproof Step1\n@Barbara\nEvery S is M\n∴ Every S is P\n" of
             Right doc -> do
               let result = checkDocument ext doc
               checkDiagnostics result `shouldSatisfy` null
             Left err -> expectationFailure err
 
     it "reports unknown namespace in qualified ref" $
-      case parseDocument "proof Step1\n@NoSuch.Barbara\nEvery S is M\n∴ Every S is P.\n" of
+      case parseDocument "proof Step1\n@NoSuch.Barbara\nEvery S is M\n∴ Every S is P\n" of
         Right doc -> do
           let result = checkDocument Map.empty doc
           checkDiagnostics result `shouldSatisfy` any (\d -> "Unknown namespace" `T.isInfixOf` diagMessage d)
         Left err -> expectationFailure err
 
     it "reports unknown namespace in open directive" $
-      case parseDocument "open NoSuch\n\nproof Step1\nEvery M is P\nEvery S is M\n∴ Every S is P.\n" of
+      case parseDocument "open NoSuch\n\nproof Step1\nEvery M is P\nEvery S is M\n∴ Every S is P\n" of
         Right doc -> do
           let result = checkDocument Map.empty doc
           checkDiagnostics result `shouldSatisfy` any (\d -> "Unknown namespace" `T.isInfixOf` diagMessage d)
@@ -594,14 +594,14 @@ main = hspec $ do
               [ ("A", ("a.syl", Map.singleton "Foo" (Proposition A s p), Map.empty)),
                 ("B", ("b.syl", Map.singleton "Foo" (Proposition E s p), Map.empty))
               ]
-       in case parseDocument "open A\nopen B\n\nproof Step1\n@Foo\nEvery S is M\n∴ Every S is P.\n" of
+       in case parseDocument "open A\nopen B\n\nproof Step1\n@Foo\nEvery S is M\n∴ Every S is P\n" of
             Right doc -> do
               let result = checkDocument ext doc
               checkDiagnostics result `shouldSatisfy` any (\d -> "Ambiguous" `T.isInfixOf` diagMessage d)
             Left err -> expectationFailure err
 
     it "parses hole conclusion" $
-      case parseDocument "proof Test\nEvery M is P\nEvery S is M\n∴ ?.\n" of
+      case parseDocument "proof Test\nEvery M is P\nEvery S is M\n∴ ?\n" of
         Right doc -> do
           length (docProofs doc) `shouldBe` 1
           let block = locValue (head (docProofs doc))
@@ -609,7 +609,7 @@ main = hspec $ do
         Left err -> expectationFailure err
 
     it "produces hole fills for hole conclusion" $
-      case parseDocument "proof Test\nEvery M is P\nEvery S is M\n∴ ?.\n" of
+      case parseDocument "proof Test\nEvery M is P\nEvery S is M\n∴ ?\n" of
         Right doc -> do
           let result = checkDocument Map.empty doc
           checkHoleFills result `shouldSatisfy` (not . null)
@@ -617,7 +617,7 @@ main = hspec $ do
         Left err -> expectationFailure err
 
     it "emits warning diagnostic for hole" $
-      case parseDocument "proof Test\nEvery M is P\nEvery S is M\n∴ ?.\n" of
+      case parseDocument "proof Test\nEvery M is P\nEvery S is M\n∴ ?\n" of
         Right doc -> do
           let result = checkDocument Map.empty doc
           checkDiagnostics result `shouldSatisfy` any (\d -> "solution" `T.isInfixOf` diagMessage d)
@@ -625,28 +625,28 @@ main = hspec $ do
         Left err -> expectationFailure err
 
     it "parses term hole in conclusion" $
-      case parseDocument "proof Test\nEvery M is P\nEvery S is M\n∴ Every ? is P.\n" of
+      case parseDocument "proof Test\nEvery M is P\nEvery S is M\n∴ Every ? is P\n" of
         Right doc -> do
           let block = locValue (head (docProofs doc))
           locValue (proofConclusion block) `shouldBe` PropH (ConcretePT A) HoleT (ConcreteT p)
         Left err -> expectationFailure err
 
     it "parses quantifier hole in conclusion" $
-      case parseDocument "proof Test\nEvery M is P\nEvery S is M\n∴ ? S is P.\n" of
+      case parseDocument "proof Test\nEvery M is P\nEvery S is M\n∴ ? S is P\n" of
         Right doc -> do
           let block = locValue (head (docProofs doc))
           locValue (proofConclusion block) `shouldBe` PropH HolePT (ConcreteT s) (ConcreteT p)
         Left err -> expectationFailure err
 
     it "parses term hole in premise" $
-      case parseDocument "proof Test\nEvery ? is P\nEvery S is M\n∴ ?.\n" of
+      case parseDocument "proof Test\nEvery ? is P\nEvery S is M\n∴ ?\n" of
         Right doc -> do
           let block = locValue (head (docProofs doc))
           locValue (head (proofPremises block)) `shouldBe` PremiseHole (PropH (ConcretePT A) HoleT (ConcreteT p))
         Left err -> expectationFailure err
 
     it "produces fills for term hole in premise" $
-      case parseDocument "proof Test\nEvery ? is P\nEvery S is ?\n∴ Every S is P.\n" of
+      case parseDocument "proof Test\nEvery ? is P\nEvery S is ?\n∴ Every S is P\n" of
         Right doc -> do
           let result = checkDocument Map.empty doc
           checkHoleFills result `shouldSatisfy` (not . null)
@@ -654,7 +654,7 @@ main = hspec $ do
         Left err -> expectationFailure err
 
     it "produces fills for whole premise hole" $
-      case parseDocument "proof Test\n?\nEvery S is M\n∴ Every S is P.\n" of
+      case parseDocument "proof Test\n?\nEvery S is M\n∴ Every S is P\n" of
         Right doc -> do
           let result = checkDocument Map.empty doc
           checkHoleFills result `shouldSatisfy` (not . null)

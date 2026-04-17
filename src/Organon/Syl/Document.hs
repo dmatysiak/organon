@@ -170,10 +170,8 @@ proofBlockP = do
 
 conclusionP :: Parser (Located PropositionH)
 conclusionP = do
-  _ <- optional (symbol "∴" <|> symbol "therefore")
+  _ <- symbol "∴" <|> symbol "therefore"
   loc <- located propositionHP
-  _ <- char '.'
-  sc
   pure loc
 
 -- | Extract a concrete Proposition from a PropositionH, if it has no holes.

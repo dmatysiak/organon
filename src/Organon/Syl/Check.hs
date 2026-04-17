@@ -137,16 +137,17 @@ checkDocument ext doc =
           name = locValue (proofName block)
           nameStart = locStart (proofName block)
           nameEnd = locEnd (proofName block)
+          -- Reference hovers and definitions are independent of proof validity.
+          refHovers = mkRefHovers ext opens ctx (proofPremises block)
+          refDefs = mkRefDefs ext opens locs (proofPremises block)
        in case checkProofBlock trad ext opens ctx block of
             Left (newDiags, newFills) ->
-              go trad opens ctx locs (newDiags ++ diags) proofs hovers defs swaps (newFills ++ fills) rest
+              go trad opens ctx locs (newDiags ++ diags) proofs (refHovers ++ hovers) (refDefs ++ defs) swaps (newFills ++ fills) rest
             Right checked ->
               let concl = conclusion (checkedSyllogism checked)
                   ctx' = Map.insert name concl ctx
                   locs' = Map.insert name (nameStart, nameEnd) locs
                   proofHover = mkProofHover nameStart nameEnd checked
-                  refHovers = mkRefHovers ext opens ctx (proofPremises block)
-                  refDefs = mkRefDefs ext opens locs (proofPremises block)
                   newSwaps = mkSwapAction checked (proofPremises block)
                in if Map.member name ctx
                     then

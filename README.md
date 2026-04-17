@@ -1,6 +1,6 @@
 # organon-syl
 
-A proof assistant for medieval syllogistic logic — figures, moods, and reductions.
+A proof assistant for medieval syllogistic logic — figures, moods and reductions.
 
 ## Building
 
@@ -31,7 +31,7 @@ organon-syl> :solve Every M is P; Every S is M; ?
   Barbari (Figure 1): Some S is P
 ```
 
-Use `:tradition strict|traditional|full` to select between 15, 19, or 24
+Use `:tradition strict|traditional|full` to select between 15, 19 or 24
 valid moods.
 
 ## LSP server
@@ -58,63 +58,63 @@ tradition Full
 open Basics
 
 proof Barbara
-Every M is P
-Every S is M
-∴ Every S is P.
+  Every M is P
+  Every S is M
+  ∴ Every S is P
 
 proof Cesare
-No P is M
-Every S is M
-∴ No S is P.
+  No P is M
+  Every S is M
+  ∴ No S is P
 
 -- reference a proof in this file
 proof Step3
-@Barbara
-@Cesare
-∴ No S is P.
+  @Barbara
+  @Cesare
+  ∴ No S is P
 
 -- reference a proof from an opened namespace
 proof Step4
-@Basics.Darii
-@Barbara
-∴ Some S is P.
+  @Basics.Darii
+  @Barbara
+  ∴ Some S is P
 
 -- qualified references work without open
 proof Step5
-@Basics.Darii
-@Cesare
-∴ Some S is P.
+  @Basics.Darii
+  @Cesare
+  ∴ Some S is P
 ```
 
 ### Holes
 
-Use `?` anywhere a term, quantifier, or entire proposition can appear.
+Use `?` anywhere a term, quantifier or entire proposition can appear.
 The LSP runs the solver and offers code actions to fill each hole.
 
 ```
 -- whole conclusion unknown: solver finds valid conclusions
 proof FindConclusion
-Every M is P
-Every S is M
-∴ ?.
+  Every M is P
+  Every S is M
+  ∴ ?
 
 -- term holes: unknown subject or predicate
 proof FindSubject
-Every M is P
-Every ? is M
-∴ Every ? is P.
+  Every M is P
+  Every ? is M
+  ∴ Every ? is P
 
 -- quantifier hole: unknown proposition type
 proof FindQuantifier
-Every M is P
-Every S is M
-∴ ? S is P.
+  Every M is P
+  Every S is M
+  ∴ ? S is P
 
 -- whole premise unknown
 proof FindPremise
-?
-Every S is M
-∴ Every S is P.
+  ?
+  Every S is M
+  ∴ Every S is P
 ```
 
 ### Namespaces

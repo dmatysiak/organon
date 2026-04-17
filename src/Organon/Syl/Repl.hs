@@ -347,7 +347,7 @@ syllogismP = do
 separator :: Parser ()
 separator =
   ()
-    <$ (symbol ";" <|> symbol ".")
+    <$ symbol ";"
       <|> ()
     <$ some newline
     <* sc

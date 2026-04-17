@@ -90,6 +90,11 @@ handlers stateVar =
         case msg of
           TNotificationMessage _ _ (DidSaveTextDocumentParams (TextDocumentIdentifier uri) _) ->
             diagnoseUri stateVar (toNormalizedUri uri),
+      notificationHandler SMethod_TextDocumentDidClose $ \msg ->
+        case msg of
+          TNotificationMessage _ _ (DidCloseTextDocumentParams (TextDocumentIdentifier uri)) ->
+            let nuri = toNormalizedUri uri
+             in publishDiagnostics 100 nuri Nothing (partitionBySource []),
       requestHandler SMethod_TextDocumentHover $ \req responder -> do
         let TRequestMessage _ _ _ (HoverParams (TextDocumentIdentifier uri) pos _) = req
         result <- hoverAt stateVar (toNormalizedUri uri) pos
