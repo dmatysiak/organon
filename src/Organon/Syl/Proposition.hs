@@ -25,8 +25,8 @@ negateTerm (Term n c) = Term n (not c)
 -- | Simple conversion ('s' in the mnemonics).
 -- Swap subject and predicate, preserving the proposition type.
 -- Valid only for E and I propositions.
---   E: "No S is P"   → "No P is S"
---   I: "Some S is P" → "Some P is S"
+--   E: "no S is P"   → "no P is S"
+--   I: "some S is P" → "some P is S"
 simpleConversion :: Proposition -> Maybe Proposition
 simpleConversion (Proposition E s p) = Just (Proposition E p s)
 simpleConversion (Proposition I s p) = Just (Proposition I p s)
@@ -35,8 +35,8 @@ simpleConversion _ = Nothing
 -- | Conversion per accidens ('p' in the mnemonics).
 -- Swap subject and predicate, weaken the quantity.
 -- Requires existential import.
---   A: "Every S is P" → "Some P is S"
---   E: "No S is P"  → "Some P is not S"
+--   A: "every S is P" → "some P is S"
+--   E: "no S is P"  → "some P is not S"
 conversionPerAccidens :: Proposition -> Maybe Proposition
 conversionPerAccidens (Proposition A s p) = Just (Proposition I p s)
 conversionPerAccidens (Proposition E s p) = Just (Proposition O p s)
@@ -44,10 +44,10 @@ conversionPerAccidens _ = Nothing
 
 -- | Obversion: keep the subject, flip the quality, negate the predicate.
 -- Valid for all four proposition types.
---   A: "Every S is P"      → "No S is non-P"
---   E: "No S is P"         → "Every S is non-P"
---   I: "Some S is P"       → "Some S is not non-P"
---   O: "Some S is not P"   → "Some S is non-P"
+--   A: "every S is P"      → "no S is non-P"
+--   E: "no S is P"         → "every S is non-P"
+--   I: "some S is P"       → "some S is not non-P"
+--   O: "some S is not P"   → "some S is non-P"
 obversion :: Proposition -> Proposition
 obversion (Proposition A s p) = Proposition E s (negateTerm p)
 obversion (Proposition E s p) = Proposition A s (negateTerm p)

@@ -27,10 +27,10 @@ data Term = Term
 
 -- | The four categorical proposition types.
 --
---   A = Universal Affirmative  ("Every S is P")
---   E = Universal Negative     ("No S is P")
---   I = Particular Affirmative ("Some S is P")
---   O = Particular Negative    ("Some S is not P")
+--   A = Universal Affirmative  ("every S is P")
+--   E = Universal Negative     ("no S is P")
+--   I = Particular Affirmative ("some S is P")
+--   O = Particular Negative    ("some S is not P")
 data PropType = A | E | I | O
   deriving (Eq, Ord, Show, Enum, Bounded)
 

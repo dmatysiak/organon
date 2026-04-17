@@ -4,26 +4,26 @@
 tradition Strict
 
 proof Barbara
-  Every M is P
-  Every S is M
-  ∴ Every S is P
+  every M is P
+  every S is M
+  ∴ every S is P
 
 proof Celarent
-  No M is P
-  Every S is M
-  ∴ No S is P
+  no M is P
+  every S is M
+  ∴ no S is P
 
 proof Cesare
-  No P is M
-  Every S is M
-  ∴ No S is P
+  no P is M
+  every S is M
+  ∴ no S is P
 
 proof Baroco
-  Every P is M
-  Some S is not M
-  ∴ Some S is not P
+  every P is M
+  some S is not M
+  ∴ some S is not P
 
 proof Bocardo
-  Some M is not P
-  Every M is S
-  ∴ Some S is not P
+  some M is not P
+  every M is S
+  ∴ some S is not P

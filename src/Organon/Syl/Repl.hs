@@ -245,10 +245,10 @@ type Parser = Parsec Void Text
 -- | Parse a proposition from text.
 --
 -- Accepted forms:
---   "Every S is P"
---   "No S is P"
---   "Some S is P"
---   "Some S is not P"
+--   "every S is P"
+--   "no S is P"
+--   "some S is P"
+--   "some S is not P"
 --
 -- Terms may be prefixed with "non-" to indicate complemented terms.
 parseProposition :: Text -> Either String Proposition
@@ -261,7 +261,7 @@ parseProposition input =
 -- or semicolons.
 --
 -- Example:
---   "Every M is P; Every S is M; Every S is P"
+--   "every M is P; every S is M; every S is P"
 parseSyllogism :: Text -> Either String Syllogism
 parseSyllogism input =
   case parse (sc *> syllogismP <* eof) "" input of
@@ -324,7 +324,7 @@ propE = do
   p <- termP
   pure (Proposition E s p)
 
--- "Some S is not P" (O) vs "Some S is P" (I)
+-- "some S is not P" (O) vs "some S is P" (I)
 propIO :: Parser Proposition
 propIO = do
   _ <- symbol "Some"

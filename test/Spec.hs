@@ -268,10 +268,10 @@ main = hspec $ do
 
   describe "Pretty printing" $ do
     it "prettyProposition renders A correctly" $
-      prettyProposition (Proposition A s p) `shouldBe` "Every S is P"
+      prettyProposition (Proposition A s p) `shouldBe` "every S is P"
 
     it "prettyProposition renders O correctly" $
-      prettyProposition (Proposition O s p) `shouldBe` "Some S is not P"
+      prettyProposition (Proposition O s p) `shouldBe` "some S is not P"
 
     it "prettyTerm renders complemented term" $
       prettyTerm (Term "P" True) `shouldBe` "non-P"
@@ -543,7 +543,7 @@ main = hspec $ do
       case parseDocument "proof Step1\nEvery M is P\nEvery S is M\n∴ Every S is P\n\nproof Step2\n@Step1\nEvery P is M\n∴ Every S is M\n" of
         Right doc -> do
           let result = checkDocument Map.empty doc
-          checkHovers result `shouldSatisfy` any (\h -> "Every S is P" `elem` segments (hoverText h))
+          checkHovers result `shouldSatisfy` any (\h -> "every S is P" `elem` segments (hoverText h))
         Left err -> expectationFailure err
 
     it "resolves qualified @Ns.Name from external context" $

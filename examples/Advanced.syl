@@ -4,15 +4,15 @@ open Basics
 
 proof FromBarbara
   @Barbara
-  Every M is S
-  ∴ Every M is P
+  every M is S
+  ∴ every M is P
 
 proof FromCesare
   @Cesare
-  Every P is S
-  ∴ Some S is P
+  every P is S
+  ∴ some S is P
 
 proof QualifiedRef
   @Basics.Darii
-  No P is S
-  ∴ Some S is not P
+  no P is S
+  ∴ some S is not P

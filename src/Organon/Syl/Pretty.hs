@@ -36,19 +36,19 @@ prettyPropType I = "I"
 prettyPropType O = "O"
 
 -- | Render a proposition in natural language form.
---   A: "Every S is P"
---   E: "No S is P"
---   I: "Some S is P"
---   O: "Some S is not P"
+--   A: "every S is P"
+--   E: "no S is P"
+--   I: "some S is P"
+--   O: "some S is not P"
 prettyProposition :: Proposition -> Text
 prettyProposition (Proposition A s p) =
-  "Every " <> prettyTerm s <> " is " <> prettyTerm p
+  "every " <> prettyTerm s <> " is " <> prettyTerm p
 prettyProposition (Proposition E s p) =
-  "No " <> prettyTerm s <> " is " <> prettyTerm p
+  "no " <> prettyTerm s <> " is " <> prettyTerm p
 prettyProposition (Proposition I s p) =
-  "Some " <> prettyTerm s <> " is " <> prettyTerm p
+  "some " <> prettyTerm s <> " is " <> prettyTerm p
 prettyProposition (Proposition O s p) =
-  "Some " <> prettyTerm s <> " is not " <> prettyTerm p
+  "some " <> prettyTerm s <> " is not " <> prettyTerm p
 
 -- | Render a figure as a number.
 prettyFigure :: Figure -> Text
@@ -124,10 +124,10 @@ prettyPropositionH :: PropositionH -> Text
 prettyPropositionH WholePropH = "?"
 prettyPropositionH (PropH ptH s p_) =
   case ptH of
-    ConcretePT A -> "Every " <> prettyTermH s <> " is " <> prettyTermH p_
-    ConcretePT E -> "No " <> prettyTermH s <> " is " <> prettyTermH p_
-    ConcretePT I -> "Some " <> prettyTermH s <> " is " <> prettyTermH p_
-    ConcretePT O -> "Some " <> prettyTermH s <> " is not " <> prettyTermH p_
+    ConcretePT A -> "every " <> prettyTermH s <> " is " <> prettyTermH p_
+    ConcretePT E -> "no " <> prettyTermH s <> " is " <> prettyTermH p_
+    ConcretePT I -> "some " <> prettyTermH s <> " is " <> prettyTermH p_
+    ConcretePT O -> "some " <> prettyTermH s <> " is not " <> prettyTermH p_
     HolePT -> "? " <> prettyTermH s <> " is " <> prettyTermH p_
 
 -- | Render a term from a solution, showing "?S"/"?P"/"?M" for unresolved roles.
@@ -138,13 +138,13 @@ prettyMaybeTerm Nothing label = label
 -- | Render a solution proposition.
 prettySolutionProp :: SolutionProp -> (Text, Text) -> Text
 prettySolutionProp (SolutionProp A s p) (sl, pl) =
-  "Every " <> prettyMaybeTerm s sl <> " is " <> prettyMaybeTerm p pl
+  "every " <> prettyMaybeTerm s sl <> " is " <> prettyMaybeTerm p pl
 prettySolutionProp (SolutionProp E s p) (sl, pl) =
-  "No " <> prettyMaybeTerm s sl <> " is " <> prettyMaybeTerm p pl
+  "no " <> prettyMaybeTerm s sl <> " is " <> prettyMaybeTerm p pl
 prettySolutionProp (SolutionProp I s p) (sl, pl) =
-  "Some " <> prettyMaybeTerm s sl <> " is " <> prettyMaybeTerm p pl
+  "some " <> prettyMaybeTerm s sl <> " is " <> prettyMaybeTerm p pl
 prettySolutionProp (SolutionProp O s p) (sl, pl) =
-  "Some " <> prettyMaybeTerm s sl <> " is not " <> prettyMaybeTerm p pl
+  "some " <> prettyMaybeTerm s sl <> " is not " <> prettyMaybeTerm p pl
 
 -- | Role labels for each figure position.
 figureLabels :: Figure -> ((Text, Text), (Text, Text), (Text, Text))

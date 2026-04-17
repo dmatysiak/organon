@@ -18,17 +18,17 @@ The REPL supports validation, proof by reduction to Figure 1, and
 hole-based solving. Type `:help` for commands.
 
 ```
-organon-syl> Every M is P; Every S is M; Every S is P
+organon-syl> every M is P; every S is M; every S is P
 Valid: Barbara (Figure 1)
 
-organon-syl> :prove Every M is P; Every S is M; Every S is P
+organon-syl> :prove every M is P; every S is M; every S is P
 Reduction of Barbara:
   1. Axiom: Barbara (perfect syllogism)
 
-organon-syl> :solve Every M is P; Every S is M; ?
+organon-syl> :solve every M is P; every S is M; ?
 2 solutions found:
-  Barbara (Figure 1): Every S is P
-  Barbari (Figure 1): Some S is P
+  Barbara (Figure 1): every S is P
+  Barbari (Figure 1): some S is P
 ```
 
 Use `:tradition strict|traditional|full` to select between 15, 19 or 24
@@ -58,32 +58,32 @@ tradition Full
 open Basics
 
 proof Barbara
-  Every M is P
-  Every S is M
-  ∴ Every S is P
+  every M is P
+  every S is M
+  ∴ every S is P
 
 proof Cesare
-  No P is M
-  Every S is M
-  ∴ No S is P
+  no P is M
+  every S is M
+  ∴ no S is P
 
 -- reference a proof in this file
 proof Step3
   @Barbara
   @Cesare
-  ∴ No S is P
+  ∴ no S is P
 
 -- reference a proof from an opened namespace
 proof Step4
   @Basics.Darii
   @Barbara
-  ∴ Some S is P
+  ∴ some S is P
 
 -- qualified references work without open
 proof Step5
   @Basics.Darii
   @Cesare
-  ∴ Some S is P
+  ∴ some S is P
 ```
 
 ### Holes
@@ -94,27 +94,27 @@ The LSP runs the solver and offers code actions to fill each hole.
 ```
 -- whole conclusion unknown: solver finds valid conclusions
 proof FindConclusion
-  Every M is P
-  Every S is M
+  every M is P
+  every S is M
   ∴ ?
 
 -- term holes: unknown subject or predicate
 proof FindSubject
-  Every M is P
-  Every ? is M
-  ∴ Every ? is P
+  every M is P
+  every ? is M
+  ∴ every ? is P
 
 -- quantifier hole: unknown proposition type
 proof FindQuantifier
-  Every M is P
-  Every S is M
+  every M is P
+  every S is M
   ∴ ? S is P
 
 -- whole premise unknown
 proof FindPremise
   ?
-  Every S is M
-  ∴ Every S is P
+  every S is M
+  ∴ every S is P
 ```
 
 ### Namespaces
