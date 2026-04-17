@@ -95,7 +95,7 @@ handlers stateVar =
         case msg of
           TNotificationMessage _ _ (DidCloseTextDocumentParams (TextDocumentIdentifier uri)) ->
             let nuri = toNormalizedUri uri
-             in publishDiagnostics 100 nuri Nothing (partitionBySource []),
+             in publishDiagnostics 100 nuri Nothing (Map.singleton (Just "organon-syl") mempty),
       requestHandler SMethod_TextDocumentHover $ \req responder -> do
         let TRequestMessage _ _ _ (HoverParams (TextDocumentIdentifier uri) pos _) = req
         result <- hoverAt stateVar (toNormalizedUri uri) pos
@@ -242,7 +242,11 @@ indexFile stateVar nuri fp txt =
         ws' <- readTVar stateVar
         writeTVar stateVar (Map.insert nuri entry ws')
       let lspDiags = map toLspDiag (Check.checkDiagnostics result)
-      publishDiagnostics 100 nuri Nothing (partitionBySource lspDiags)
+          -- Always include the source key so Map.union in the lsp library
+          -- replaces (rather than preserves) stale diagnostics when the list
+          -- becomes empty.
+          diagsBySource = Map.insertWith (\_ old -> old) (Just "organon-syl") mempty (partitionBySource lspDiags)
+      publishDiagnostics 100 nuri Nothing diagsBySource
       pure (Just result)
   where
     -- Extract name location from check result hovers (first hover is the proof name).
