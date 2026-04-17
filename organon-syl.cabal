@@ -58,6 +58,31 @@ library
     , text
   default-language: Haskell2010
 
+executable organon-syl-check
+  main-is: Main.hs
+  other-modules:
+      Paths_organon_syl
+  autogen-modules:
+      Paths_organon_syl
+  hs-source-dirs:
+      app/check
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , co-log-core
+    , containers
+    , directory
+    , filepath
+    , haskeline
+    , lsp
+    , lsp-types
+    , megaparsec
+    , organon-syl
+    , parser-combinators
+    , stm
+    , text
+  default-language: Haskell2010
+
 executable organon-syl-lsp
   main-is: Main.hs
   other-modules:

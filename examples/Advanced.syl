@@ -4,8 +4,8 @@ open Basics
 
 proof FromBarbara
   @Barbara
-  every M is S
-  ∴ every M is P
+  No P is S
+  ∴ No P is S. 
 
 proof FromCesare
   @Cesare

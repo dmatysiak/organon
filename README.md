@@ -140,6 +140,21 @@ Each file validates its own proofs under its own `tradition` directive.
 Cross-tradition references are allowed — a proved conclusion is a valid
 premise regardless of which tradition validated it.
 
+## Batch checker
+
+```
+stack exec organon-syl-check -- [file.syl | dir ...]
+```
+
+Checks `.syl` files and prints diagnostics in `file:line:col: severity: message`
+format. Defaults to the current directory. Silent on success; exits non-zero on errors.
+
+```
+$ stack exec organon-syl-check -- examples/Basics.syl examples/God.syl
+$ echo $?
+0
+```
+
 ## Running tests
 
 ```

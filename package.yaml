@@ -68,6 +68,16 @@ executables:
     dependencies:
       - organon-syl
 
+  organon-syl-check:
+    main: Main.hs
+    source-dirs: app/check
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
+    dependencies:
+      - organon-syl
+
 tests:
   organon-syl-test:
     main: Spec.hs
