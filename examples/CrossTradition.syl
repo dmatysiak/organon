@@ -6,17 +6,27 @@ tradition Full
 
 open Strict
 
+-- @Baroco = some S is not P
+-- Ferio: no P is Q; some S is P; → but we need @Baroco as a premise.
+-- Darii: every Q is P; @Baroco (some S is not P) — no, O premise needs
+-- a mood that accepts O. Let's use Bocardo (OAO-3):
+-- @Baroco (some S is not P) as major; every S is Q as minor;
+-- ∴ some Q is not P
 proof ExtendedBaroco
   @Baroco
-  every P is M
-  ∴ some P is not P
+  every S is Q
+  ∴ some Q is not P
 
 proof Darapti
   every M is P
   every M is S
   ∴ some S is P
 
+-- @Strict.Barbara = every S is P, @Darapti = some S is P
+-- We need S,P from one ref and a middle term from the other.
+-- Use @Strict.Barbara (every S is P) as major, every Q is S as minor.
+-- Barbara: every S is P; every Q is S; ∴ every Q is P
 proof MixedRefs
   @Strict.Barbara
-  @Darapti
-  ∴ some S is P
+  every Q is S
+  ∴ every Q is P

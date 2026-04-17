@@ -2,18 +2,24 @@
 
 open Basics
 
+-- @Barbara = every S is P
+-- Barbara: every S is P; every Q is S; ∴ every Q is P
 proof FromBarbara
   @Barbara
-  no P is S
-  ∴ no P is S
+  every Q is S
+  ∴ every Q is P
 
+-- @Cesare = no S is P
+-- Cesare (EAE-2): no S is P; every Q is S; ∴ no Q is P
 proof FromCesare
   @Cesare
-  every P is S
-  ∴ some S is P
+  every Q is S
+  ∴ no Q is P
 
+-- @Basics.Darii = some S is P
+-- Darii: every P is Q; some S is P; ∴ some S is Q
 proof QualifiedRef
+  every P is Q
   @Basics.Darii
-  no P is S
-  ∴ some S is not P
+  ∴ some S is Q
 
