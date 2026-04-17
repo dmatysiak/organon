@@ -607,8 +607,10 @@ formatText txt =
       trimmed = map T.stripEnd lns
       -- Replace "therefore " with "∴ " on conclusion lines.
       canonicalized = map canonicalizeTherefore trimmed
+      -- Normalize indentation and internal whitespace in proposition lines.
+      normalized = normalizePropositions canonicalized
       -- Collapse runs of blank lines to a single blank line.
-      collapsed = collapseBlankLines canonicalized
+      collapsed = collapseBlankLines normalized
    in -- Ensure file ends with exactly one newline.
       T.unlines collapsed
 
@@ -620,6 +622,25 @@ canonicalizeTherefore line =
    in if "therefore " `T.isPrefixOf` lower
         then indent <> "∴ " <> T.drop 10 rest
         else line
+
+-- | Normalize indentation and internal whitespace on proposition lines.
+-- Lines that are indented and start with a proposition keyword (Every, No,
+-- Some), a conclusion marker (∴), or a reference (@) get their indentation
+-- set to two spaces and runs of internal whitespace collapsed to single
+-- spaces.
+normalizePropositions :: [T.Text] -> [T.Text]
+normalizePropositions = map normalizeLine
+  where
+    normalizeLine line
+      | isPropositionLine line = "  " <> (T.unwords . T.words . T.strip) line
+      | otherwise = line
+    isPropositionLine line =
+      let stripped = T.stripStart line
+       in not (T.null stripped)
+            && T.length stripped < T.length line
+            && any
+              (`T.isPrefixOf` T.toLower stripped)
+              ["every ", "no ", "some ", "∴ ", "@"]
 
 -- | Collapse consecutive blank lines into a single blank line.
 collapseBlankLines :: [T.Text] -> [T.Text]
