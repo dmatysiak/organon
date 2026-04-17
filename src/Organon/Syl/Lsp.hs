@@ -11,6 +11,7 @@ where
 import Control.Concurrent.STM (TVar, atomically, newTVarIO, readTVar, readTVarIO, writeTVar)
 import Control.Monad (forM_, when)
 import Control.Monad.IO.Class (liftIO)
+import Data.List (groupBy)
 import qualified Data.Map.Strict as Map
 import Data.Text (pack)
 import qualified Data.Text as T
@@ -110,6 +111,10 @@ handlers stateVar =
       requestHandler SMethod_TextDocumentCompletion $ \req responder -> do
         let TRequestMessage _ _ _ (CompletionParams (TextDocumentIdentifier uri) pos _ _ _) = req
         result <- completionsAt stateVar (toNormalizedUri uri) pos
+        responder (Right result),
+      requestHandler SMethod_TextDocumentFormatting $ \req responder -> do
+        let TRequestMessage _ _ _ (DocumentFormattingParams _ (TextDocumentIdentifier uri) _) = req
+        result <- formatDoc (toNormalizedUri uri)
         responder (Right result),
       notificationHandler SMethod_WorkspaceDidChangeConfiguration $ \_ ->
         pure ()
@@ -565,3 +570,62 @@ mkExtCompletionItem ns name mood =
       _command = Nothing,
       _data_ = Nothing
     }
+
+-- | Format a document: normalize whitespace, canonicalize conclusion markers.
+-- Only formats if the document parses successfully.
+formatDoc :: NormalizedUri -> LspM () ([TextEdit] |? Null)
+formatDoc nuri = do
+  mvf <- getVirtualFile nuri
+  case mvf of
+    Nothing -> pure (InR Null)
+    Just vf -> do
+      let txt = virtualFileText vf
+      case parseDocument txt of
+        Left _ -> pure (InR Null)
+        Right _ ->
+          let formatted = formatText txt
+           in if formatted == txt
+                then pure (InL [])
+                else
+                  let lns = T.lines txt
+                      totalLines = length lns
+                      -- T.lines "a\nb\n" == ["a","b",""], so last elem is
+                      -- empty when file ends with newline.  Use max to handle
+                      -- the case where there is content on the final line.
+                      lastLineLen = T.length (last lns)
+                      endPos
+                        | T.null (last lns) = Position (fromIntegral (totalLines - 1)) 0
+                        | otherwise = Position (fromIntegral (totalLines - 1)) (fromIntegral lastLineLen)
+                      range = Range (Position 0 0) endPos
+                   in pure (InL [TextEdit range formatted])
+
+-- | Text-level formatting that preserves comments.
+formatText :: T.Text -> T.Text
+formatText txt =
+  let lns = T.lines txt
+      -- Trim trailing whitespace from each line.
+      trimmed = map T.stripEnd lns
+      -- Replace "therefore " with "∴ " on conclusion lines.
+      canonicalized = map canonicalizeTherefore trimmed
+      -- Collapse runs of blank lines to a single blank line.
+      collapsed = collapseBlankLines canonicalized
+   in -- Ensure file ends with exactly one newline.
+      T.unlines collapsed
+
+-- | Replace a leading "therefore" with "∴" on conclusion lines.
+canonicalizeTherefore :: T.Text -> T.Text
+canonicalizeTherefore line =
+  let (indent, rest) = T.span (== ' ') line
+      lower = T.toLower rest
+   in if "therefore " `T.isPrefixOf` lower
+        then indent <> "∴ " <> T.drop 10 rest
+        else line
+
+-- | Collapse consecutive blank lines into a single blank line.
+collapseBlankLines :: [T.Text] -> [T.Text]
+collapseBlankLines = concatMap squash . groupBy sameBlank
+  where
+    sameBlank a b = T.null a && T.null b
+    squash grp
+      | T.null (head grp) = [T.empty]
+      | otherwise = grp

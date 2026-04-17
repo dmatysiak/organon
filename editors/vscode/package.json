@@ -8,6 +8,7 @@
     "vscode": "^1.75.0"
   },
   "main": "./out/extension.js",
+  "activationEvents": [],
   "categories": ["Programming Languages"],
   "contributes": {
     "languages": [
@@ -39,6 +40,11 @@
           "default": "organon-syl-lsp",
           "description": "Path to the organon-syl-lsp binary. If not absolute, looked up on PATH."
         }
+      }
+    },
+    "configurationDefaults": {
+      "[syl]": {
+        "editor.formatOnSave": true
       }
     }
   },
