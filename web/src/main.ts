@@ -11,6 +11,7 @@ import {
 } from "./core/check";
 import { prettyMood } from "./core/pretty";
 import { formatText } from "./core/format";
+import { initRepl } from "./repl";
 
 // Monaco requires web workers for editor functionality.
 self.MonacoEnvironment = {
@@ -28,9 +29,12 @@ monaco.languages.setMonarchTokensProvider(LANG_ID, {
   tokenizer: {
     root: [
       [/--.*$/, "comment"],
-      [/^(tradition)\s+(Strict|Traditional|Full)\b/, ["keyword", "constant"]],
-      [/^(open)\s+(\S+)/, ["keyword", "type.identifier"]],
-      [/^(proof)\s+(\S+)/, ["keyword", "function"]],
+      [
+        /^(tradition)(\s+)(Strict|Traditional|Full)\b/,
+        ["keyword", "", "constant"],
+      ],
+      [/^(open)(\s+)(\S+)/, ["keyword", "", "type.identifier"]],
+      [/^(proof)(\s+)(\S+)/, ["keyword", "", "function"]],
       [/∴|therefore\b/, "keyword"],
       [/@\S+?\.\S+/, "variable"],
       [/@\S+/, "variable"],
@@ -231,6 +235,10 @@ const editor = monaco.editor.create(container, {
   automaticLayout: true,
 });
 
+// Must be declared before createTab → switchToTab → runCheck uses it.
+const emptyExt: ExternalContext = new Map();
+let lastCheckResult: CheckResult | null = null;
+
 // Create initial tab
 createTab("Basics.syl", EXAMPLES.basics);
 
@@ -379,13 +387,7 @@ editor.onDidChangeModelContent((e) => {
   }
 });
 
-// -- State for code actions --------------------------------------------------
-
-let lastCheckResult: CheckResult | null = null;
-
 // -- Diagnostics & checking --------------------------------------------------
-
-const emptyExt: ExternalContext = new Map();
 
 function runCheck(): void {
   const model = editor.getModel();
@@ -604,4 +606,53 @@ function rangeOverlaps(
     end.posCol,
   );
   return monaco.Range.areIntersectingOrTouching(range, spanRange);
+}
+
+// -- REPL panel --------------------------------------------------------------
+
+initRepl({
+  outputEl: document.getElementById("repl-output")!,
+  inputEl: document.getElementById("repl-input") as HTMLInputElement,
+});
+
+// -- Draggable splitter ------------------------------------------------------
+
+{
+  const splitter = document.getElementById("splitter")!;
+  const editorPane = document.querySelector(".editor-pane") as HTMLElement;
+  const replPanel = document.getElementById("repl-panel")!;
+
+  let dragging = false;
+
+  splitter.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    dragging = true;
+    splitter.classList.add("dragging");
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  });
+
+  window.addEventListener("mousemove", (e) => {
+    if (!dragging) return;
+    const parent = editorPane.parentElement!;
+    const rect = parent.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+    const splitterWidth = splitter.offsetWidth;
+    const minEditor = 200;
+    const minRepl = 200;
+    const available = rect.width - splitterWidth;
+    const editorW = Math.max(minEditor, Math.min(available - minRepl, offsetX));
+    const replW = available - editorW;
+    editorPane.style.flex = "none";
+    editorPane.style.width = editorW + "px";
+    replPanel.style.width = replW + "px";
+  });
+
+  window.addEventListener("mouseup", () => {
+    if (!dragging) return;
+    dragging = false;
+    splitter.classList.remove("dragging");
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+  });
 }
