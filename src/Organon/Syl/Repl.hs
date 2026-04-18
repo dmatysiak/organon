@@ -175,8 +175,8 @@ printReduced mood syl =
   case reducedSyllogism mood syl of
     Nothing -> pure ()
     Just fig1 -> do
-      liftIO $ TIO.putStrLn $ "Figure 1 form:"
-      liftIO $ TIO.putStrLn $ prettySyllogism fig1
+      liftIO $ TIO.putStrLn "Figure 1 form:"
+      liftIO $ TIO.putStrLn $ T.unlines $ map ("  " <>) $ T.lines $ prettySyllogism fig1
 
 handleMoodInfo :: Tradition -> Text -> InputT IO ()
 handleMoodInfo trad name =

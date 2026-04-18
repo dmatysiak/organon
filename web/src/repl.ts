@@ -132,7 +132,9 @@ function reducedLines(mood: Mood, syl: Syllogism): OutputLine[] {
   if (fig1 === null) return [];
   return [
     info("Figure 1 form:"),
-    ...prettySyllogism(fig1).split("\n").map(result),
+    ...prettySyllogism(fig1)
+      .split("\n")
+      .map((l) => result(`  ${l}`)),
   ];
 }
 
@@ -147,16 +149,24 @@ function handleProve(input: string): OutputLine[] {
       return [err(`Invalid: ${res.message}`)];
     case "Valid": {
       const steps = reduce(res.mood, parsed);
+      const [proofHeader, ...proofSteps] = prettyProof(res.mood, steps).split(
+        "\n",
+      );
       return [
-        ...prettyProof(res.mood, steps).split("\n").map(result),
+        info(proofHeader),
+        ...proofSteps.map(result),
         ...reducedLines(res.mood, parsed),
       ];
     }
     case "ValidSwapped": {
       const steps = reduce(res.mood, res.syllogism);
+      const [proofHeader, ...proofSteps] = prettyProof(res.mood, steps).split(
+        "\n",
+      );
       return [
         info("(premises swapped)"),
-        ...prettyProof(res.mood, steps).split("\n").map(result),
+        info(proofHeader),
+        ...proofSteps.map(result),
         ...reducedLines(res.mood, res.syllogism),
       ];
     }
@@ -222,7 +232,7 @@ function handleMoods(): OutputLine[] {
   }
 
   for (const [fig, group] of byFigure) {
-    lines.push(info(`  ${fig}: ${group.map(prettyMood).join(", ")}`));
+    lines.push(result(`  ${fig}: ${group.map(prettyMood).join(", ")}`));
   }
   return lines;
 }
