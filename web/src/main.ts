@@ -9,7 +9,7 @@ import {
   type CheckResult,
   type ExternalContext,
 } from "./core/check";
-import { prettyMood, prettyProposition } from "./core/pretty";
+import { prettyMood } from "./core/pretty";
 import { formatText } from "./core/format";
 import { initRepl } from "./repl";
 
@@ -36,8 +36,14 @@ monaco.languages.setMonarchTokensProvider(LANG_ID, {
       [/^(open)(\s+)(\S+)/, ["keyword", "", "type.identifier"]],
       [/^(proof)(\s+)(\S+)/, ["keyword", "", "function"]],
       [/∴|therefore\b/, "keyword"],
-      [/@\S+?\.\S+/, "variable"],
-      [/@\S+/, "variable"],
+      [
+        /(@[A-Za-z_][A-Za-z0-9_-]*\.[A-Za-z_][A-Za-z0-9_-]*)(\s+(?:conv|per_accidens)\b)?/,
+        ["variable", "keyword"],
+      ],
+      [
+        /(@[A-Za-z_][A-Za-z0-9_-]*)(\s+(?:conv|per_accidens)\b)?/,
+        ["variable", "keyword"],
+      ],
       [/\b(every|no|some)\b/i, "keyword"],
       [/\b(is\s+not|is)\b/, "keyword"],
       [/\?/, "variable"],
@@ -561,7 +567,6 @@ monaco.languages.registerCodeActionProvider(LANG_ID, {
       if (!rangeOverlaps(range, ra.reducePrem1Start, ra.reduceConcEnd))
         continue;
 
-      const fig1 = ra.reduceResult;
       actions.push({
         title: `Reduce ${prettyMood(ra.reduceMood)} to Figure 1`,
         kind: "refactor.rewrite",
@@ -576,7 +581,7 @@ monaco.languages.registerCodeActionProvider(LANG_ID, {
                   ra.reducePrem1End.posLine,
                   ra.reducePrem1End.posCol,
                 ),
-                text: prettyProposition(fig1.major),
+                text: ra.reducePrem1Text,
               },
               versionId: model.getVersionId(),
             },
@@ -589,7 +594,7 @@ monaco.languages.registerCodeActionProvider(LANG_ID, {
                   ra.reducePrem2End.posLine,
                   ra.reducePrem2End.posCol,
                 ),
-                text: prettyProposition(fig1.minor),
+                text: ra.reducePrem2Text,
               },
               versionId: model.getVersionId(),
             },
@@ -602,7 +607,7 @@ monaco.languages.registerCodeActionProvider(LANG_ID, {
                   ra.reduceConcEnd.posLine,
                   ra.reduceConcEnd.posCol,
                 ),
-                text: prettyProposition(fig1.conclusion),
+                text: ra.reduceConcText,
               },
               versionId: model.getVersionId(),
             },

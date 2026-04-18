@@ -1,6 +1,7 @@
 // Pretty printing — ported from Organon.Syl.Pretty
 
-import { PropositionH, Solution, SolutionProp, TermH } from "./hole";
+import type { PropositionH, Solution, SolutionProp, TermH } from "./hole";
+import type { RefModifier } from "./document";
 import { moodSpec } from "./tradition";
 import {
   Figure,
@@ -15,6 +16,10 @@ import {
 
 export function prettyTerm(t: Term): string {
   return t.complemented ? `non-${t.termName}` : t.termName;
+}
+
+export function prettyRefModifier(mod: RefModifier): string {
+  return mod;
 }
 
 export function prettyPropType(pt: PropType): string {

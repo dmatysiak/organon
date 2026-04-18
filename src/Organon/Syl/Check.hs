@@ -23,7 +23,7 @@ import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import Organon.Syl.Document
 import Organon.Syl.Hole (PropTypeH (..), PropositionH (..), Solution (..), SolutionProp (..), SyllogismH (..), TermH (..), solve)
-import Organon.Syl.Pretty (figureLabels, prettyFigure, prettyMood, prettyProof, prettyProposition, prettySolutionProp, showText)
+import Organon.Syl.Pretty (figureLabels, prettyFigure, prettyMood, prettyProof, prettyProposition, prettyRefModifier, prettySolutionProp, showText)
 import Organon.Syl.Proof (reduce, reducedSyllogism)
 import Organon.Syl.Tradition (MoodSpec (..), moodSpec)
 import Organon.Syl.Types
@@ -105,7 +105,10 @@ data ReduceAction = ReduceAction
     reduceConcStart  :: SrcPos,
     reduceConcEnd    :: SrcPos,
     reduceMood       :: Mood,
-    reduceResult     :: Syllogism
+    reduceResult     :: Syllogism,
+    reducePrem1Text  :: Text,
+    reducePrem2Text  :: Text,
+    reduceConcText   :: Text
   }
   deriving stock (Eq, Show)
 
@@ -352,9 +355,9 @@ resolveSingle ::
   Either [Diagnostic] PropositionH
 resolveSingle _ _ _ lp | PremiseProp prop <- locValue lp = Right (propToH prop)
 resolveSingle _ _ _ lp | PremiseHole propH <- locValue lp = Right propH
-resolveSingle ext opens ctx lp | PremiseRef Nothing name <- locValue lp =
+resolveSingle ext opens ctx lp | PremiseRef Nothing name mmod <- locValue lp =
   case Map.lookup name ctx of
-    Just prop -> Right (propToH prop)
+    Just prop -> applyRefModifier lp mmod prop
     Nothing ->
       let hits =
             [ prop
@@ -363,7 +366,7 @@ resolveSingle ext opens ctx lp | PremiseRef Nothing name <- locValue lp =
                 Just prop <- [Map.lookup name (nsConclusions entry)]
             ]
        in case hits of
-            [prop] -> Right (propToH prop)
+            [prop] -> applyRefModifier lp mmod prop
             (_ : _ : _) ->
               Left
                 [ Diagnostic
@@ -383,7 +386,7 @@ resolveSingle ext opens ctx lp | PremiseRef Nothing name <- locValue lp =
                     Error
                     ("Unknown reference: @" <> name)
                 ]
-resolveSingle ext _ _ lp | PremiseRef (Just ns) name <- locValue lp =
+resolveSingle ext _ _ lp | PremiseRef (Just ns) name mmod <- locValue lp =
   case Map.lookup ns (unExternalContext ext) of
     Nothing ->
       Left
@@ -395,7 +398,7 @@ resolveSingle ext _ _ lp | PremiseRef (Just ns) name <- locValue lp =
         ]
     Just entry ->
       case Map.lookup name (nsConclusions entry) of
-        Just prop -> Right (propToH prop)
+        Just prop -> applyRefModifier lp mmod prop
         Nothing ->
           Left
             [ Diagnostic
@@ -405,6 +408,35 @@ resolveSingle ext _ _ lp | PremiseRef (Just ns) name <- locValue lp =
                 ("Unknown reference: @" <> ns <> "." <> name)
             ]
 resolveSingle _ _ _ _ = Left []
+
+-- | Apply a reference modifier to a resolved proposition.
+-- Simple conversion is valid for E and I; conversion per accidens for A and E.
+applyRefModifier :: Located Premise -> Maybe RefModifier -> Proposition -> Either [Diagnostic] PropositionH
+applyRefModifier _ Nothing prop = Right (propToH prop)
+applyRefModifier lp (Just RefConv) prop
+  | propType prop `elem` [E, I] =
+      Right (propToH (Proposition (propType prop) (predicate prop) (subject prop)))
+  | otherwise =
+      Left
+        [ Diagnostic
+            (locStart lp)
+            (locEnd lp)
+            Error
+            ("Cannot apply simple conversion to " <> showText (propType prop) <> " proposition")
+        ]
+applyRefModifier lp (Just RefPerAccidens) prop
+  | propType prop == A =
+      Right (propToH (Proposition I (predicate prop) (subject prop)))
+  | propType prop == E =
+      Right (propToH (Proposition O (predicate prop) (subject prop)))
+  | otherwise =
+      Left
+        [ Diagnostic
+            (locStart lp)
+            (locEnd lp)
+            Error
+            ("Cannot apply conversion per accidens to " <> showText (propType prop) <> " proposition")
+        ]
 
 -- | Build hover text for a proof name span.
 mkProofHover :: SrcPos -> SrcPos -> CheckedProof -> HoverItem
@@ -423,7 +455,7 @@ mkRefHovers :: ExternalContext -> [Text] -> Map Text Proposition -> [Located Pre
 mkRefHovers ext opens ctx = concatMap go
   where
     go lp = case locValue lp of
-      PremiseRef mns name ->
+      PremiseRef mns name _ ->
         case resolveRef ext opens ctx mns name of
           Just prop -> [HoverItem (locStart lp) (locEnd lp) (prettyProposition prop)]
           Nothing -> []
@@ -435,7 +467,7 @@ mkRefDefs :: ExternalContext -> [Text] -> Map Text (SrcPos, SrcPos) -> [Located 
 mkRefDefs ext opens locs = concatMap go
   where
     go lp = case locValue lp of
-      PremiseRef Nothing name ->
+      PremiseRef Nothing name _ ->
         -- Try local first, then opened namespaces.
         case Map.lookup name locs of
           Just (ts, te) -> [DefinitionItem (locStart lp) (locEnd lp) Nothing ts te]
@@ -449,7 +481,7 @@ mkRefDefs ext opens locs = concatMap go
              in case hits of
                   [(fp, ts, te)] -> [DefinitionItem (locStart lp) (locEnd lp) (Just fp) ts te]
                   _ -> []
-      PremiseRef (Just ns) name ->
+      PremiseRef (Just ns) name _ ->
         case Map.lookup ns (unExternalContext ext) of
           Just entry ->
             case Map.lookup name (nsLocations entry) of
@@ -492,11 +524,75 @@ mkReduceAction :: CheckedProof -> [Located Premise] -> Located PropositionH -> [
 mkReduceAction cp prems conclLoc
   | [p1, p2] <- prems,
     Just fig1 <- reducedSyllogism (checkedMood cp) (checkedSyllogism cp) =
-      [ ReduceAction
-          (locStart p1) (locEnd p1)
-          (locStart p2) (locEnd p2)
-          (locStart conclLoc) (locEnd conclLoc)
-          (checkedMood cp)
-          fig1
-      ]
+      let ops = reduceOps (checkedMood cp)
+          (origMaj, origMin) = if checkedSwapped cp then (p2, p1) else (p1, p2)
+          (out1, op1, out2, op2) = if opMutated ops
+            then (origMin, opMinor ops, origMaj, opMajor ops)
+            else (origMaj, opMajor ops, origMin, opMinor ops)
+       in [ ReduceAction
+              (locStart p1) (locEnd p1)
+              (locStart p2) (locEnd p2)
+              (locStart conclLoc) (locEnd conclLoc)
+              (checkedMood cp)
+              fig1
+              (renderPremText op1 (locValue out1) (major fig1))
+              (renderPremText op2 (locValue out2) (minor fig1))
+              (prettyProposition (conclusion fig1))
+          ]
   | otherwise = []
+
+-- | What conversion a reduction applies to an original premise.
+data PremOp = PremNoOp | PremSimpleConv | PremPerAccidens
+
+-- | Describes the premise operations for a mood's reduction.
+data ReduceOps = ReduceOps
+  { opMajor  :: PremOp
+  , opMinor  :: PremOp
+  , opMutated :: Bool
+  }
+
+-- | Map a mood to the operations applied to its premises during reduction.
+reduceOps :: Mood -> ReduceOps
+-- Figure II
+reduceOps Cesare    = ReduceOps PremSimpleConv PremNoOp        False
+reduceOps Camestres = ReduceOps PremNoOp       PremSimpleConv  True
+reduceOps Festino   = ReduceOps PremSimpleConv PremNoOp        False
+-- Figure III
+reduceOps Darapti   = ReduceOps PremNoOp       PremPerAccidens False
+reduceOps Disamis   = ReduceOps PremSimpleConv PremNoOp        True
+reduceOps Datisi    = ReduceOps PremNoOp       PremSimpleConv  False
+reduceOps Felapton  = ReduceOps PremNoOp       PremPerAccidens False
+reduceOps Ferison   = ReduceOps PremNoOp       PremSimpleConv  False
+-- Figure IV
+reduceOps Bramantip = ReduceOps PremNoOp       PremNoOp        True
+reduceOps Camenes   = ReduceOps PremNoOp       PremNoOp        True
+reduceOps Dimaris   = ReduceOps PremNoOp       PremNoOp        True
+reduceOps Fesapo    = ReduceOps PremSimpleConv PremPerAccidens False
+reduceOps Fresison  = ReduceOps PremSimpleConv PremSimpleConv  False
+-- Subaltern moods
+reduceOps Barbari   = ReduceOps PremNoOp       PremNoOp        False
+reduceOps Celaront  = ReduceOps PremNoOp       PremNoOp        False
+reduceOps Cesaro    = reduceOps Cesare
+reduceOps Camestrop = reduceOps Camestres
+reduceOps Calemos   = reduceOps Camenes
+-- Figure I & reductio: not reachable (reducedSyllogism returns Nothing)
+reduceOps _         = ReduceOps PremNoOp PremNoOp False
+
+-- | Render a reference with an optional modifier.
+prettyPremRef :: Maybe Text -> Text -> Maybe RefModifier -> Text
+prettyPremRef mns name mmod =
+  "@" <> maybe "" (<> ".") mns <> name
+    <> maybe "" (\m -> " " <> prettyRefModifier m) mmod
+
+-- | Compute the replacement text for a premise position.
+-- If the original premise is a reference (with no existing modifier) and the
+-- reduction applies a conversion, emit @ref conv / @ref per_accidens.
+-- Otherwise fall back to the raw proposition text.
+renderPremText :: PremOp -> Premise -> Proposition -> Text
+renderPremText PremNoOp (PremiseRef mns name mmod) _ =
+  prettyPremRef mns name mmod
+renderPremText PremSimpleConv (PremiseRef mns name Nothing) _ =
+  prettyPremRef mns name (Just RefConv)
+renderPremText PremPerAccidens (PremiseRef mns name Nothing) _ =
+  prettyPremRef mns name (Just RefPerAccidens)
+renderPremText _ _ prop = prettyProposition prop

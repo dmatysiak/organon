@@ -3,6 +3,7 @@ module Organon.Syl.Document
     Document (..),
     ProofBlock (..),
     Premise (..),
+    RefModifier (..),
     SrcPos (..),
     Located (..),
 
@@ -33,14 +34,22 @@ data Located a = Located
   }
   deriving stock (Eq, Show)
 
+-- | A modifier applied to a reference premise.
+data RefModifier
+  = -- | Simple conversion: swap subject and predicate (E↔E, I↔I).
+    RefConv
+  | -- | Conversion per accidens: swap terms and weaken (A→I, E→O).
+    RefPerAccidens
+  deriving stock (Eq, Ord, Show)
+
 -- | A premise in a proof block: either a proposition, a reference, or
 -- a proposition with holes.
 data Premise
   = -- | A concrete proposition.
     PremiseProp Proposition
   | -- | A reference to a previously proved conclusion.
-    --   The first field is an optional namespace qualifier.
-    PremiseRef (Maybe Text) Text
+    --   Fields: optional namespace, name, optional conversion modifier.
+    PremiseRef (Maybe Text) Text (Maybe RefModifier)
   | -- | A proposition containing holes (term, quantifier, or whole).
     PremiseHole PropositionH
   deriving stock (Eq, Show)
@@ -98,6 +107,10 @@ propPremiseP = do
     Just prop -> pure (PremiseProp prop)
     Nothing -> pure (PremiseHole ph)
 
+refModifierP :: Parser (Maybe RefModifier)
+refModifierP =
+  optional (RefConv <$ symbol "conv" <|> RefPerAccidens <$ symbol "per_accidens")
+
 refP :: Parser Premise
 refP = do
   _ <- char '@'
@@ -106,8 +119,11 @@ refP = do
   case mDot of
     Just _ -> do
       name <- lexeme (takeWhile1P (Just "proof name") isNameChar)
-      pure (PremiseRef (Just first) name)
-    Nothing -> pure (PremiseRef Nothing first)
+      modifier <- refModifierP
+      pure (PremiseRef (Just first) name modifier)
+    Nothing -> do
+      modifier <- refModifierP
+      pure (PremiseRef Nothing first modifier)
 
 
 

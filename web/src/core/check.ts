@@ -7,6 +7,7 @@ import type {
   Premise,
   ProofBlock,
   Document,
+  RefModifier,
   SrcPos,
 } from "./document";
 import { fromConcreteH } from "./document";
@@ -16,6 +17,7 @@ import {
   prettyMood,
   prettyProof,
   prettyProposition,
+  prettyRefModifier,
   prettySolutionProp,
 } from "./pretty";
 import { reduce, reducedSyllogism } from "./proof";
@@ -97,6 +99,9 @@ export type ReduceAction = {
   readonly reduceConcEnd: SrcPos;
   readonly reduceMood: Mood;
   readonly reduceResult: Syllogism;
+  readonly reducePrem1Text: string;
+  readonly reducePrem2Text: string;
+  readonly reduceConcText: string;
 };
 
 export type NamespaceEntry = {
@@ -160,7 +165,7 @@ function resolveSingle(
   if (prem.namespace === null) {
     // Unqualified: try local first
     const local = ctx.get(prem.name);
-    if (local) return { ok: propToH(local) };
+    if (local) return applyRefModifier(lp, prem.modifier, local);
 
     // Then opened namespaces
     const hits: Proposition[] = [];
@@ -171,7 +176,7 @@ function resolveSingle(
         if (p) hits.push(p);
       }
     }
-    if (hits.length === 1) return { ok: propToH(hits[0]) };
+    if (hits.length === 1) return applyRefModifier(lp, prem.modifier, hits[0]);
     if (hits.length > 1) {
       return {
         err: [
@@ -210,7 +215,7 @@ function resolveSingle(
       };
     }
     const p = entry.nsConclusions.get(prem.name);
-    if (p) return { ok: propToH(p) };
+    if (p) return applyRefModifier(lp, prem.modifier, p);
     return {
       err: [
         {
@@ -237,6 +242,66 @@ function resolvePremises(
     results.push(r.ok);
   }
   return { ok: results };
+}
+
+function applyRefModifier(
+  lp: Located<Premise>,
+  modifier: RefModifier | null,
+  prop: Proposition,
+): { ok: PropositionH } | { err: Diagnostic[] } {
+  if (modifier === null) return { ok: propToH(prop) };
+
+  if (modifier === "conv") {
+    if (prop.propType === PropType.E || prop.propType === PropType.I) {
+      return {
+        ok: propToH({
+          propType: prop.propType,
+          subject: prop.predicate,
+          predicate: prop.subject,
+        }),
+      };
+    }
+    return {
+      err: [
+        {
+          diagStart: lp.locStart,
+          diagEnd: lp.locEnd,
+          diagSeverity: Severity.Error,
+          diagMessage: `Cannot apply simple conversion to ${prop.propType} proposition`,
+        },
+      ],
+    };
+  }
+
+  // per_accidens
+  if (prop.propType === PropType.A) {
+    return {
+      ok: propToH({
+        propType: PropType.I,
+        subject: prop.predicate,
+        predicate: prop.subject,
+      }),
+    };
+  }
+  if (prop.propType === PropType.E) {
+    return {
+      ok: propToH({
+        propType: PropType.O,
+        subject: prop.predicate,
+        predicate: prop.subject,
+      }),
+    };
+  }
+  return {
+    err: [
+      {
+        diagStart: lp.locStart,
+        diagEnd: lp.locEnd,
+        diagSeverity: Severity.Error,
+        diagMessage: `Cannot apply conversion per accidens to ${prop.propType} proposition`,
+      },
+    ],
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -388,6 +453,13 @@ function mkReduceAction(
   if (prems.length !== 2) return [];
   const fig1 = reducedSyllogism(cp.checkedMood, cp.checkedSyllogism);
   if (fig1 === null) return [];
+  const ops = reduceOps(cp.checkedMood);
+  const [origMaj, origMin] = cp.checkedSwapped
+    ? [prems[1], prems[0]]
+    : [prems[0], prems[1]];
+  const [out1, op1, out2, op2] = ops.mutated
+    ? [origMin, ops.minorOp, origMaj, ops.majorOp]
+    : [origMaj, ops.majorOp, origMin, ops.minorOp];
   return [
     {
       reducePrem1Start: prems[0].locStart,
@@ -398,8 +470,96 @@ function mkReduceAction(
       reduceConcEnd: conclLoc.locEnd,
       reduceMood: cp.checkedMood,
       reduceResult: fig1,
+      reducePrem1Text: renderPremText(op1, out1.locValue, fig1.major),
+      reducePrem2Text: renderPremText(op2, out2.locValue, fig1.minor),
+      reduceConcText: prettyProposition(fig1.conclusion),
     },
   ];
+}
+
+type PremOp = "noop" | "simple_conv" | "per_accidens";
+
+type ReduceOps = {
+  readonly majorOp: PremOp;
+  readonly minorOp: PremOp;
+  readonly mutated: boolean;
+};
+
+function reduceOps(mood: Mood): ReduceOps {
+  switch (mood) {
+    // Figure II
+    case Mood.Cesare:
+      return { majorOp: "simple_conv", minorOp: "noop", mutated: false };
+    case Mood.Camestres:
+      return { majorOp: "noop", minorOp: "simple_conv", mutated: true };
+    case Mood.Festino:
+      return { majorOp: "simple_conv", minorOp: "noop", mutated: false };
+    // Figure III
+    case Mood.Darapti:
+      return { majorOp: "noop", minorOp: "per_accidens", mutated: false };
+    case Mood.Disamis:
+      return { majorOp: "simple_conv", minorOp: "noop", mutated: true };
+    case Mood.Datisi:
+      return { majorOp: "noop", minorOp: "simple_conv", mutated: false };
+    case Mood.Felapton:
+      return { majorOp: "noop", minorOp: "per_accidens", mutated: false };
+    case Mood.Ferison:
+      return { majorOp: "noop", minorOp: "simple_conv", mutated: false };
+    // Figure IV
+    case Mood.Bramantip:
+      return { majorOp: "noop", minorOp: "noop", mutated: true };
+    case Mood.Camenes:
+      return { majorOp: "noop", minorOp: "noop", mutated: true };
+    case Mood.Dimaris:
+      return { majorOp: "noop", minorOp: "noop", mutated: true };
+    case Mood.Fesapo:
+      return {
+        majorOp: "simple_conv",
+        minorOp: "per_accidens",
+        mutated: false,
+      };
+    case Mood.Fresison:
+      return { majorOp: "simple_conv", minorOp: "simple_conv", mutated: false };
+    // Subaltern moods
+    case Mood.Barbari:
+    case Mood.Celaront:
+      return { majorOp: "noop", minorOp: "noop", mutated: false };
+    case Mood.Cesaro:
+      return reduceOps(Mood.Cesare);
+    case Mood.Camestrop:
+      return reduceOps(Mood.Camestres);
+    case Mood.Calemos:
+      return reduceOps(Mood.Camenes);
+    // Figure I & reductio: not reachable
+    default:
+      return { majorOp: "noop", minorOp: "noop", mutated: false };
+  }
+}
+
+function prettyPremRef(
+  ns: string | null,
+  name: string,
+  mod: RefModifier | null,
+): string {
+  const prefix = ns !== null ? `@${ns}.${name}` : `@${name}`;
+  return mod !== null ? `${prefix} ${prettyRefModifier(mod)}` : prefix;
+}
+
+function renderPremText(
+  op: PremOp,
+  prem: Premise,
+  fallbackProp: Proposition,
+): string {
+  if (prem.tag === "PremiseRef") {
+    if (op === "noop") {
+      return prettyPremRef(prem.namespace, prem.name, prem.modifier);
+    }
+    if (prem.modifier === null) {
+      const mod: RefModifier = op === "simple_conv" ? "conv" : "per_accidens";
+      return prettyPremRef(prem.namespace, prem.name, mod);
+    }
+  }
+  return prettyProposition(fallbackProp);
 }
 
 function mkHoleEdits(

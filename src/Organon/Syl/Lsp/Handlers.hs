@@ -17,8 +17,7 @@ import qualified Organon.Syl.Check as Check
 import Organon.Syl.Document (SrcPos (..))
 import Organon.Syl.Lsp.State (FileEntry (..), WorkspaceState, docOpenNames, getCheckResult)
 import Organon.Syl.Lsp.Util (findDefinition, findHover, toLspPos)
-import Organon.Syl.Pretty (prettyMood, prettyProposition)
-import Organon.Syl.Types (Syllogism (..))
+import Organon.Syl.Pretty (prettyMood)
 
 -- | Look up hover info for a position in a document.
 hoverAt :: TVar WorkspaceState -> NormalizedUri -> Position -> LspM () (Hover |? Null)
@@ -180,13 +179,12 @@ mkReduceCodeAction uri lineStart lineEnd ra
     p2e = Check.reducePrem2End ra
     cs  = Check.reduceConcStart ra
     ce  = Check.reduceConcEnd ra
-    fig1 = Check.reduceResult ra
     overlaps =
       posLine p1s <= lineEnd && posLine ce >= lineStart
     textEdits =
-      [ TextEdit (Range (toLspPos p1s) (toLspPos p1e)) (prettyProposition (major fig1)),
-        TextEdit (Range (toLspPos p2s) (toLspPos p2e)) (prettyProposition (minor fig1)),
-        TextEdit (Range (toLspPos cs) (toLspPos ce)) (prettyProposition (conclusion fig1))
+      [ TextEdit (Range (toLspPos p1s) (toLspPos p1e)) (Check.reducePrem1Text ra),
+        TextEdit (Range (toLspPos p2s) (toLspPos p2e)) (Check.reducePrem2Text ra),
+        TextEdit (Range (toLspPos cs) (toLspPos ce)) (Check.reduceConcText ra)
       ]
     edit =
       WorkspaceEdit

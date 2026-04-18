@@ -24,12 +24,15 @@ export type Located<T> = {
 // Premise types
 // ---------------------------------------------------------------------------
 
+export type RefModifier = "conv" | "per_accidens";
+
 export type Premise =
   | { readonly tag: "PremiseProp"; readonly prop: Proposition }
   | {
       readonly tag: "PremiseRef";
       readonly namespace: string | null;
       readonly name: string;
+      readonly modifier: RefModifier | null;
     }
   | { readonly tag: "PremiseHole"; readonly propH: PropositionH };
 
@@ -98,6 +101,12 @@ function eol(p: ParserState): boolean {
 // Premise parsing
 // ---------------------------------------------------------------------------
 
+function refModifierP(p: ParserState): RefModifier | null {
+  if (p.symbol("conv")) return "conv";
+  if (p.symbol("per_accidens")) return "per_accidens";
+  return null;
+}
+
 function refP(p: ParserState): Premise | null {
   if (p.peek() !== "@") return null;
   p.advance(); // consume '@'
@@ -107,9 +116,11 @@ function refP(p: ParserState): Premise | null {
     p.advance(); // consume '.'
     const name = p.takeWhile1(isNameChar, "proof name");
     if (name === null) return null;
-    return { tag: "PremiseRef", namespace: first, name };
+    const modifier = refModifierP(p);
+    return { tag: "PremiseRef", namespace: first, name, modifier };
   }
-  return { tag: "PremiseRef", namespace: null, name: first };
+  const modifier = refModifierP(p);
+  return { tag: "PremiseRef", namespace: null, name: first, modifier };
 }
 
 function premiseP(p: ParserState): Premise | null {

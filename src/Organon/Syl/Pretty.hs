@@ -12,6 +12,7 @@ module Organon.Syl.Pretty
     prettyPropositionH,
     prettySolution,
     prettySolutionProp,
+    prettyRefModifier,
     figureLabels,
     showText,
   )
@@ -19,6 +20,7 @@ where
 
 import Data.Text (Text)
 import qualified Data.Text as T
+import Organon.Syl.Document (RefModifier (..))
 import Organon.Syl.Hole (PropTypeH (..), PropositionH (..), Solution (..), SolutionProp (..), TermH (..))
 import Organon.Syl.Tradition (MoodSpec (..), moodSpec)
 import Organon.Syl.Types
@@ -31,6 +33,11 @@ showText = T.pack . show
 prettyTerm :: Term -> Text
 prettyTerm (Term n False) = n
 prettyTerm (Term n True) = "non-" <> n
+
+-- | Render a reference modifier keyword.
+prettyRefModifier :: RefModifier -> Text
+prettyRefModifier RefConv = "conv"
+prettyRefModifier RefPerAccidens = "per_accidens"
 
 -- | Render a proposition type as its traditional name.
 prettyPropType :: PropType -> Text

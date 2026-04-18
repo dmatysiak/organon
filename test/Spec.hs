@@ -422,7 +422,7 @@ main = hspec $ do
           length (docProofs doc) `shouldBe` 2
           let block2 = locValue (docProofs doc !! 1)
           case locValue (head (proofPremises block2)) of
-            PremiseRef _ name -> name `shouldBe` "A"
+            PremiseRef _ name _ -> name `shouldBe` "A"
             PremiseProp _ -> expectationFailure "Expected PremiseRef"
         Left err -> expectationFailure (T.unpack err)
 
@@ -460,7 +460,7 @@ main = hspec $ do
         Right doc -> do
           let block = locValue (head (docProofs doc))
           case locValue (head (proofPremises block)) of
-            PremiseRef (Just ns) name -> do
+            PremiseRef (Just ns) name _ -> do
               ns `shouldBe` "Basics"
               name `shouldBe` "Barbara"
             _ -> expectationFailure "Expected qualified PremiseRef"
@@ -471,7 +471,7 @@ main = hspec $ do
         Right doc -> do
           let block = locValue (head (docProofs doc))
           case locValue (head (proofPremises block)) of
-            PremiseRef Nothing name -> name `shouldBe` "Barbara"
+            PremiseRef Nothing name _ -> name `shouldBe` "Barbara"
             _ -> expectationFailure "Expected unqualified PremiseRef"
         Left err -> expectationFailure (T.unpack err)
 
@@ -659,6 +659,99 @@ main = hspec $ do
         Right doc -> do
           let result = checkDocument (ExternalContext Map.empty) doc
           checkHoleFills result `shouldSatisfy` (not . null)
+        Left err -> expectationFailure (T.unpack err)
+
+  describe "Reference modifiers" $ do
+    it "parses @ref conv" $
+      case parseDocument "proof Step1\nNo M is P\nEvery S is M\n∴ No S is P\n\nproof Step2\n@Step1 conv\nEvery S is M\n∴ No S is P\n" of
+        Right doc -> do
+          let block2 = locValue (docProofs doc !! 1)
+          case locValue (head (proofPremises block2)) of
+            PremiseRef Nothing name (Just RefConv) -> name `shouldBe` "Step1"
+            other -> expectationFailure ("Expected PremiseRef with RefConv, got: " <> show other)
+        Left err -> expectationFailure (T.unpack err)
+
+    it "parses @ref per_accidens" $
+      case parseDocument "proof Step1\nEvery M is P\nEvery S is M\n∴ Every S is P\n\nproof Step2\n@Step1 per_accidens\nSome P is M\n∴ Some P is S\n" of
+        Right doc -> do
+          let block2 = locValue (docProofs doc !! 1)
+          case locValue (head (proofPremises block2)) of
+            PremiseRef Nothing name (Just RefPerAccidens) -> name `shouldBe` "Step1"
+            other -> expectationFailure ("Expected PremiseRef with RefPerAccidens, got: " <> show other)
+        Left err -> expectationFailure (T.unpack err)
+
+    it "parses qualified @Ns.Name conv" $
+      case parseDocument "proof Step1\n@Basics.Celarent conv\nEvery S is M\n∴ No S is P\n" of
+        Right doc -> do
+          let block = locValue (head (docProofs doc))
+          case locValue (head (proofPremises block)) of
+            PremiseRef (Just ns) name (Just RefConv) -> do
+              ns `shouldBe` "Basics"
+              name `shouldBe` "Celarent"
+            other -> expectationFailure ("Expected qualified PremiseRef with RefConv, got: " <> show other)
+        Left err -> expectationFailure (T.unpack err)
+
+    it "resolves @ref conv (simple conversion of E)" $
+      -- Step1 proves No M is P (E proposition).
+      -- Step2 uses @Step1 conv, which should resolve to No P is M.
+      case parseDocument "proof Step1\nNo M is P\nEvery S is M\n∴ No S is P\n\nproof Step2\n@Step1 conv\nEvery S is M\n∴ No S is M\n" of
+        Right doc -> do
+          let result = checkDocument (ExternalContext Map.empty) doc
+          -- Both proofs should check successfully (no errors).
+          let errs = filter (\d -> diagSeverity d == Organon.Syl.Check.Error) (checkDiagnostics result)
+          errs `shouldBe` []
+          length (checkProofs result) `shouldBe` 2
+        Left err -> expectationFailure (T.unpack err)
+
+    it "resolves @ref per_accidens (A→I)" $
+      -- Step1 proves Every M is P (A proposition).
+      -- Step2 uses @Step1 per_accidens, which should resolve to Some P is M (I).
+      case parseDocument "proof Step1\nEvery M is P\nEvery S is M\n∴ Every S is P\n\nproof Step2\nEvery P is S\n@Step1 per_accidens\n∴ Some S is S\n" of
+        Right doc -> do
+          let result = checkDocument (ExternalContext Map.empty) doc
+          let errs = filter (\d -> diagSeverity d == Organon.Syl.Check.Error) (checkDiagnostics result)
+          errs `shouldBe` []
+          length (checkProofs result) `shouldBe` 2
+        Left err -> expectationFailure (T.unpack err)
+
+    it "rejects conv on A proposition" $
+      -- Step1 proves Every S is P (A). conv is invalid on A.
+      case parseDocument "proof Step1\nEvery M is P\nEvery S is M\n∴ Every S is P\n\nproof Step2\n@Step1 conv\nEvery S is M\n∴ Every S is P\n" of
+        Right doc -> do
+          let result = checkDocument (ExternalContext Map.empty) doc
+          checkDiagnostics result `shouldSatisfy` any (\d -> "Cannot apply simple conversion" `T.isInfixOf` diagMessage d)
+        Left err -> expectationFailure (T.unpack err)
+
+    it "rejects per_accidens on I proposition" $
+      -- Step1 proves Some S is P (I). per_accidens is invalid on I.
+      case parseDocument "proof Step1\nEvery M is P\nSome S is M\n∴ Some S is P\n\nproof Step2\n@Step1 per_accidens\nEvery S is M\n∴ Some S is P\n" of
+        Right doc -> do
+          let result = checkDocument (ExternalContext Map.empty) doc
+          checkDiagnostics result `shouldSatisfy` any (\d -> "Cannot apply conversion per accidens" `T.isInfixOf` diagMessage d)
+        Left err -> expectationFailure (T.unpack err)
+
+    it "reduce action emits @ref conv for reference premise" $
+      -- Cesare: No P is M, Every S is M ∴ No S is P
+      -- Reduction converts major (simple conv). If major is a ref, should emit @ref conv.
+      -- Step1 proves No P is M. Step2 is Cesare using @Step1 as major.
+      case parseDocument "proof Step1\nNo M is P\nEvery P is M\n∴ No P is M\n\nproof Step2\n@Step1\nEvery S is M\n∴ No S is P\n" of
+        Right doc -> do
+          let result = checkDocument (ExternalContext Map.empty) doc
+          let reduces = checkReduces result
+          reduces `shouldSatisfy` (not . null)
+          let ra = head reduces
+          reducePrem1Text ra `shouldBe` "@Step1 conv"
+        Left err -> expectationFailure (T.unpack err)
+
+    it "reduce action preserves literal premise text" $
+      -- Cesare with both literal premises: reduction should emit proposition text.
+      case parseDocument "proof Step1\nNo P is M\nEvery S is M\n∴ No S is P\n" of
+        Right doc -> do
+          let result = checkDocument (ExternalContext Map.empty) doc
+          let reduces = checkReduces result
+          reduces `shouldSatisfy` (not . null)
+          let ra = head reduces
+          reducePrem1Text ra `shouldBe` "no M is P"
         Left err -> expectationFailure (T.unpack err)
 
 -- Helpers
