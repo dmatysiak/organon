@@ -204,7 +204,9 @@ function renderTabs(): void {
 
     const label = document.createElement("span");
     label.textContent = tab.name;
-    label.addEventListener("click", () => switchToTab(tab.id));
+    label.addEventListener("click", () => {
+      if (activeTabId !== tab.id) switchToTab(tab.id);
+    });
     label.addEventListener("dblclick", (e) => {
       e.stopPropagation();
       startRenameTab(tab, label);
