@@ -60,10 +60,14 @@ export function prettyMoodForm(mood: Mood): string {
   const strip = (s: string) => s.slice(1); // drop leading '?'
   const renderProp = (pt: PropType, s: string, p: string): string => {
     switch (pt) {
-      case PropType.A: return `every ${strip(s)} is ${strip(p)}`;
-      case PropType.E: return `no ${strip(s)} is ${strip(p)}`;
-      case PropType.I: return `some ${strip(s)} is ${strip(p)}`;
-      case PropType.O: return `some ${strip(s)} is not ${strip(p)}`;
+      case PropType.A:
+        return `every ${strip(s)} is ${strip(p)}`;
+      case PropType.E:
+        return `no ${strip(s)} is ${strip(p)}`;
+      case PropType.I:
+        return `some ${strip(s)} is ${strip(p)}`;
+      case PropType.O:
+        return `some ${strip(s)} is not ${strip(p)}`;
     }
   };
   return [
