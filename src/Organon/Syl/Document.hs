@@ -109,7 +109,7 @@ propPremiseP = do
 
 refModifierP :: Parser (Maybe RefModifier)
 refModifierP =
-  optional (RefConv <$ symbol "conv" <|> RefPerAccidens <$ symbol "per_accidens")
+  optional (RefConv <$ symbol "conv" <|> RefPerAccidens <$ symbol "per-accidens")
 
 refP :: Parser Premise
 refP = do

@@ -273,7 +273,7 @@ function applyRefModifier(
     };
   }
 
-  // per_accidens
+  // per-accidens
   if (prop.propType === PropType.A) {
     return {
       ok: propToH({
@@ -555,7 +555,7 @@ function renderPremText(
       return prettyPremRef(prem.namespace, prem.name, prem.modifier);
     }
     if (prem.modifier === null) {
-      const mod: RefModifier = op === "simple_conv" ? "conv" : "per_accidens";
+      const mod: RefModifier = op === "simple_conv" ? "conv" : "per-accidens";
       return prettyPremRef(prem.namespace, prem.name, mod);
     }
   }

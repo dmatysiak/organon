@@ -671,8 +671,8 @@ main = hspec $ do
             other -> expectationFailure ("Expected PremiseRef with RefConv, got: " <> show other)
         Left err -> expectationFailure (T.unpack err)
 
-    it "parses @ref per_accidens" $
-      case parseDocument "proof Step1\nEvery M is P\nEvery S is M\n∴ Every S is P\n\nproof Step2\n@Step1 per_accidens\nSome P is M\n∴ Some P is S\n" of
+    it "parses @ref per-accidens" $
+      case parseDocument "proof Step1\nEvery M is P\nEvery S is M\n∴ Every S is P\n\nproof Step2\n@Step1 per-accidens\nSome P is M\n∴ Some P is S\n" of
         Right doc -> do
           let block2 = locValue (docProofs doc !! 1)
           case locValue (head (proofPremises block2)) of
@@ -704,10 +704,10 @@ main = hspec $ do
           length (checkProofs result) `shouldBe` 2
         Left err -> expectationFailure (T.unpack err)
 
-    it "resolves @ref per_accidens (A→I)" $
+    it "resolves @ref per-accidens (A→I)" $
       -- Step1 proves Every M is P (A proposition).
-      -- Step2 uses @Step1 per_accidens, which should resolve to Some P is M (I).
-      case parseDocument "proof Step1\nEvery M is P\nEvery S is M\n∴ Every S is P\n\nproof Step2\nEvery P is S\n@Step1 per_accidens\n∴ Some S is S\n" of
+      -- Step2 uses @Step1 per-accidens, which should resolve to Some P is M (I).
+      case parseDocument "proof Step1\nEvery M is P\nEvery S is M\n∴ Every S is P\n\nproof Step2\nEvery P is S\n@Step1 per-accidens\n∴ Some S is S\n" of
         Right doc -> do
           let result = checkDocument (ExternalContext Map.empty) doc
           let errs = filter (\d -> diagSeverity d == Organon.Syl.Check.Error) (checkDiagnostics result)
@@ -723,9 +723,9 @@ main = hspec $ do
           checkDiagnostics result `shouldSatisfy` any (\d -> "Cannot apply simple conversion" `T.isInfixOf` diagMessage d)
         Left err -> expectationFailure (T.unpack err)
 
-    it "rejects per_accidens on I proposition" $
-      -- Step1 proves Some S is P (I). per_accidens is invalid on I.
-      case parseDocument "proof Step1\nEvery M is P\nSome S is M\n∴ Some S is P\n\nproof Step2\n@Step1 per_accidens\nEvery S is M\n∴ Some S is P\n" of
+    it "rejects per-accidens on I proposition" $
+      -- Step1 proves Some S is P (I). per-accidens is invalid on I.
+      case parseDocument "proof Step1\nEvery M is P\nSome S is M\n∴ Some S is P\n\nproof Step2\n@Step1 per-accidens\nEvery S is M\n∴ Some S is P\n" of
         Right doc -> do
           let result = checkDocument (ExternalContext Map.empty) doc
           checkDiagnostics result `shouldSatisfy` any (\d -> "Cannot apply conversion per accidens" `T.isInfixOf` diagMessage d)

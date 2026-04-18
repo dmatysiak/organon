@@ -46,7 +46,7 @@
       "name": "keyword.operator.conclusion.syl"
     },
     "qualified-reference": {
-      "match": "(@)([A-Za-z_][A-Za-z0-9_-]*)\\.([A-Za-z_][A-Za-z0-9_-]*)(?:\\s+(conv|per_accidens)\\b)?",
+      "match": "(@)([A-Za-z_][A-Za-z0-9_-]*)\\.([A-Za-z_][A-Za-z0-9_-]*)(?:\\s+(conv|per-accidens)\\b)?",
       "captures": {
         "1": { "name": "punctuation.definition.reference.syl" },
         "2": { "name": "entity.name.namespace.syl" },
@@ -55,7 +55,7 @@
       }
     },
     "reference": {
-      "match": "(@[A-Za-z_][A-Za-z0-9_-]*)(?:\\s+(conv|per_accidens)\\b)?",
+      "match": "(@[A-Za-z_][A-Za-z0-9_-]*)(?:\\s+(conv|per-accidens)\\b)?",
       "captures": {
         "1": { "name": "variable.other.reference.syl" },
         "2": { "name": "keyword.other.modifier.syl" }

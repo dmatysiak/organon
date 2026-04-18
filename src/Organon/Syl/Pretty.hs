@@ -37,7 +37,7 @@ prettyTerm (Term n True) = "non-" <> n
 -- | Render a reference modifier keyword.
 prettyRefModifier :: RefModifier -> Text
 prettyRefModifier RefConv = "conv"
-prettyRefModifier RefPerAccidens = "per_accidens"
+prettyRefModifier RefPerAccidens = "per-accidens"
 
 -- | Render a proposition type as its traditional name.
 prettyPropType :: PropType -> Text

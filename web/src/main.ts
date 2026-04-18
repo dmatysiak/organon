@@ -37,11 +37,11 @@ monaco.languages.setMonarchTokensProvider(LANG_ID, {
       [/^(proof)(\s+)(\S+)/, ["keyword", "", "function"]],
       [/∴|therefore\b/, "keyword"],
       [
-        /(@[A-Za-z_][A-Za-z0-9_-]*\.[A-Za-z_][A-Za-z0-9_-]*)(\s+(?:conv|per_accidens)\b)?/,
+        /(@[A-Za-z_][A-Za-z0-9_-]*\.[A-Za-z_][A-Za-z0-9_-]*)(\s+(?:conv|per-accidens)\b)?/,
         ["variable", "keyword"],
       ],
       [
-        /(@[A-Za-z_][A-Za-z0-9_-]*)(\s+(?:conv|per_accidens)\b)?/,
+        /(@[A-Za-z_][A-Za-z0-9_-]*)(\s+(?:conv|per-accidens)\b)?/,
         ["variable", "keyword"],
       ],
       [/\b(every|no|some)\b/i, "keyword"],
@@ -205,6 +205,10 @@ function renderTabs(): void {
     const label = document.createElement("span");
     label.textContent = tab.name;
     label.addEventListener("click", () => switchToTab(tab.id));
+    label.addEventListener("dblclick", (e) => {
+      e.stopPropagation();
+      startRenameTab(tab, label);
+    });
 
     const dot = document.createElement("span");
     dot.className = "modified";
@@ -220,6 +224,41 @@ function renderTabs(): void {
     el.append(dot, label, close);
     tabBar.appendChild(el);
   }
+}
+
+function startRenameTab(tab: Tab, label: HTMLElement): void {
+  const input = document.createElement("input");
+  input.type = "text";
+  input.value = tab.name;
+  input.style.cssText =
+    "background:#1e1e1e;color:#fff;border:1px solid #007acc;font-size:12px;" +
+    "padding:0 4px;outline:none;width:" +
+    Math.max(60, label.offsetWidth) +
+    "px;";
+
+  const commit = () => {
+    const raw = input.value.trim();
+    if (raw.length > 0) {
+      tab.name = raw.endsWith(".syl") ? raw : raw + ".syl";
+    }
+    renderTabs();
+    editor.focus();
+  };
+
+  input.addEventListener("blur", commit);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      input.blur();
+    } else if (e.key === "Escape") {
+      input.removeEventListener("blur", commit);
+      renderTabs();
+      editor.focus();
+    }
+  });
+
+  label.replaceWith(input);
+  input.select();
 }
 
 function activeTab(): Tab | null {

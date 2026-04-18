@@ -586,7 +586,7 @@ prettyPremRef mns name mmod =
 
 -- | Compute the replacement text for a premise position.
 -- If the original premise is a reference (with no existing modifier) and the
--- reduction applies a conversion, emit @ref conv / @ref per_accidens.
+-- reduction applies a conversion, emit @ref conv / @ref per-accidens.
 -- Otherwise fall back to the raw proposition text.
 renderPremText :: PremOp -> Premise -> Proposition -> Text
 renderPremText PremNoOp (PremiseRef mns name mmod) _ =

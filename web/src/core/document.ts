@@ -24,7 +24,7 @@ export type Located<T> = {
 // Premise types
 // ---------------------------------------------------------------------------
 
-export type RefModifier = "conv" | "per_accidens";
+export type RefModifier = "conv" | "per-accidens";
 
 export type Premise =
   | { readonly tag: "PremiseProp"; readonly prop: Proposition }
@@ -103,7 +103,7 @@ function eol(p: ParserState): boolean {
 
 function refModifierP(p: ParserState): RefModifier | null {
   if (p.symbol("conv")) return "conv";
-  if (p.symbol("per_accidens")) return "per_accidens";
+  if (p.symbol("per-accidens")) return "per-accidens";
   return null;
 }
 
