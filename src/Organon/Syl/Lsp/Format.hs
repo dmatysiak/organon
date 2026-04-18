@@ -4,7 +4,7 @@ module Organon.Syl.Lsp.Format
   )
 where
 
-import Data.List (groupBy)
+import Data.List (groupBy, unsnoc)
 import qualified Data.Text as T
 import Language.LSP.Protocol.Types
 import Language.LSP.Server
@@ -29,9 +29,7 @@ formatDoc nuri = do
                 else
                   let lns = T.lines txt
                       totalLines = length lns
-                      lastLine = case reverse lns of
-                        (x : _) -> x
-                        [] -> T.empty
+                      lastLine = maybe T.empty snd (unsnoc lns)
                       lastLineLen = T.length lastLine
                       endPos
                         | T.null lastLine = Position (fromIntegral (totalLines - 1)) 0

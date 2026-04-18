@@ -1,6 +1,5 @@
 module Main (main) where
 
-import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Version (showVersion)
 import Organon.Syl.Repl (repl)

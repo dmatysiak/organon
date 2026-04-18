@@ -42,7 +42,7 @@ loop tradRef = do
 handleInput :: IORef Tradition -> Text -> InputT IO Bool
 handleInput tradRef input
   | cmd == ":quit" || cmd == ":q" = do
-      outputStrLn "Goodbye."
+      liftIO $ TIO.putStrLn "Goodbye."
       pure True
   | cmd == ":help" || cmd == ":h" = do
       printHelp
@@ -120,7 +120,7 @@ handleTradition tradRef args =
     "strict" -> set Strict
     "traditional" -> set Traditional
     "full" -> set Full
-    _ -> outputStrLn "Usage: :tradition strict|traditional|full"
+    _ -> liftIO $ TIO.putStrLn "Usage: :tradition strict|traditional|full"
   where
     set t = do
       liftIO $ writeIORef tradRef t
@@ -220,5 +220,5 @@ handleSolve trad input =
     Left err -> liftIO $ TIO.putStrLn $ "Parse error: " <> err
     Right sylH ->
       case solve trad sylH of
-        [] -> outputStrLn "No valid syllogisms match this pattern."
+        [] -> liftIO $ TIO.putStrLn "No valid syllogisms match this pattern."
         solutions -> mapM_ (\sol -> liftIO $ TIO.putStrLn $ prettySolution sol) solutions

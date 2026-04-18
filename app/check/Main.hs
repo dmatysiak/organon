@@ -8,7 +8,7 @@ import qualified Data.Text.IO as TIO
 import Organon.Syl.Check
 import Organon.Syl.Document
 import Organon.Syl.FileUtil (findSylFiles, namespaceFromPath)
-import Organon.Syl.Pretty (prettyMood)
+import Organon.Syl.Pretty (prettyMood, showText)
 import Organon.Syl.Types
 import System.Directory (doesDirectoryExist, doesFileExist)
 import System.Environment (getArgs, getProgName)
@@ -107,8 +107,6 @@ checkFiles files = do
           <> " ("
           <> prettyMood (holeFillMood fill)
           <> ")"
-    when (null diags && null fills) $
-      pure ()
     pure (fePath fe, result, diags)
   pure results
 
@@ -117,9 +115,9 @@ formatDiag :: FilePath -> Diagnostic -> Text
 formatDiag fp d =
   T.pack fp
     <> ":"
-    <> T.pack (show (posLine (diagStart d)))
+    <> showText (posLine (diagStart d))
     <> ":"
-    <> T.pack (show (posCol (diagStart d)))
+    <> showText (posCol (diagStart d))
     <> ": "
     <> severityStr (diagSeverity d)
     <> ": "

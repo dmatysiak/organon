@@ -12,6 +12,7 @@ module Organon.Syl.Pretty
     prettyPropositionH,
     prettySolution,
     prettySolutionProp,
+    showText,
   )
 where
 
@@ -20,6 +21,10 @@ import qualified Data.Text as T
 import Organon.Syl.Hole (PropTypeH (..), PropositionH (..), Solution (..), SolutionProp (..), TermH (..))
 import Organon.Syl.Tradition (MoodSpec (..), moodSpec)
 import Organon.Syl.Types
+
+-- | Convert a showable value to Text.
+showText :: Show a => a -> Text
+showText = T.pack . show
 
 -- | Render a term as text, prefixing "non-" if complemented.
 prettyTerm :: Term -> Text
@@ -133,7 +138,7 @@ prettyProof mood steps =
       : zipWith formatStep [(1 :: Int) ..] steps
   where
     formatStep n step =
-      "  " <> T.pack (show n) <> ". " <> prettyProofStep step
+      "  " <> showText n <> ". " <> prettyProofStep step
 
 -- | Render a term with possible hole.
 prettyTermH :: TermH -> Text

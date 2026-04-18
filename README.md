@@ -81,15 +81,10 @@ proof Step3
   ∴ no S is P
 
 -- reference a proof from an opened namespace
+-- qualified references work without open
 proof Step4
   @Basics.Darii
   @Barbara
-  ∴ some S is P
-
--- qualified references work without open
-proof Step5
-  @Basics.Darii
-  @Cesare
   ∴ some S is P
 ```
 

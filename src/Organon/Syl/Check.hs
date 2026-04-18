@@ -23,7 +23,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Organon.Syl.Document
 import Organon.Syl.Hole (PropTypeH (..), PropositionH (..), Solution (..), SolutionProp (..), SyllogismH (..), TermH (..), solve)
-import Organon.Syl.Pretty (prettyFigure, prettyMood, prettyProof, prettyProposition, prettyPropositionH)
+import Organon.Syl.Pretty (prettyFigure, prettyMood, prettyProof, prettyProposition, prettyPropositionH, showText)
 import Organon.Syl.Proof (reduce)
 import Organon.Syl.Types
 import Organon.Syl.Validity
@@ -244,7 +244,7 @@ checkProofBlock trad ext opens ctx block =
                             s
                             e
                             Warning
-                            (T.pack (show (length fills)) <> " solution(s) available")
+                            (showText (length fills) <> " solution(s) available")
                           | (s, e) <- holeSpans
                         ]
                    in Left (diags, fills)
@@ -254,7 +254,7 @@ checkProofBlock trad ext opens ctx block =
               n = length resolved
            in Left
                 ( [ Diagnostic s e Error $
-                      "Expected 2 premises, got " <> T.pack (show n)
+                      "Expected 2 premises, got " <> showText n
                   ],
                   []
                 )
@@ -330,65 +330,70 @@ resolvePremises ::
   Map Text Proposition ->
   [Located Premise] ->
   Either [Diagnostic] [PropositionH]
-resolvePremises ext opens ctx = go []
-  where
-    go acc [] = Right (reverse acc)
-    go acc (lp : rest) =
-      case locValue lp of
-        PremiseProp prop -> go (propToH prop : acc) rest
-        PremiseHole propH -> go (propH : acc) rest
-        PremiseRef Nothing name ->
-          case Map.lookup name ctx of
-            Just prop -> go (propToH prop : acc) rest
-            Nothing ->
-              let hits =
-                    [ prop
-                      | ns <- opens,
-                        Just entry <- [Map.lookup ns (unExternalContext ext)],
-                        Just prop <- [Map.lookup name (nsConclusions entry)]
-                    ]
-               in case hits of
-                    [prop] -> go (propToH prop : acc) rest
-                    (_ : _ : _) ->
-                      Left
-                        [ Diagnostic
-                            (locStart lp)
-                            (locEnd lp)
-                            Error
-                            ( "Ambiguous reference: @"
-                                <> name
-                                <> " (found in multiple opened namespaces)"
-                            )
-                        ]
-                    [] ->
-                      Left
-                        [ Diagnostic
-                            (locStart lp)
-                            (locEnd lp)
-                            Error
-                            ("Unknown reference: @" <> name)
-                        ]
-        PremiseRef (Just ns) name ->
-          case Map.lookup ns (unExternalContext ext) of
-            Nothing ->
+resolvePremises ext opens ctx = traverse (resolveSingle ext opens ctx)
+
+-- | Resolve a single premise to a PropositionH.
+resolveSingle ::
+  ExternalContext ->
+  [Text] ->
+  Map Text Proposition ->
+  Located Premise ->
+  Either [Diagnostic] PropositionH
+resolveSingle _ _ _ lp | PremiseProp prop <- locValue lp = Right (propToH prop)
+resolveSingle _ _ _ lp | PremiseHole propH <- locValue lp = Right propH
+resolveSingle ext opens ctx lp | PremiseRef Nothing name <- locValue lp =
+  case Map.lookup name ctx of
+    Just prop -> Right (propToH prop)
+    Nothing ->
+      let hits =
+            [ prop
+              | ns <- opens,
+                Just entry <- [Map.lookup ns (unExternalContext ext)],
+                Just prop <- [Map.lookup name (nsConclusions entry)]
+            ]
+       in case hits of
+            [prop] -> Right (propToH prop)
+            (_ : _ : _) ->
               Left
                 [ Diagnostic
                     (locStart lp)
                     (locEnd lp)
                     Error
-                    ("Unknown namespace: " <> ns)
+                    ( "Ambiguous reference: @"
+                        <> name
+                        <> " (found in multiple opened namespaces)"
+                    )
                 ]
-            Just entry ->
-              case Map.lookup name (nsConclusions entry) of
-                Just prop -> go (propToH prop : acc) rest
-                Nothing ->
-                  Left
-                    [ Diagnostic
-                        (locStart lp)
-                        (locEnd lp)
-                        Error
-                        ("Unknown reference: @" <> ns <> "." <> name)
-                    ]
+            [] ->
+              Left
+                [ Diagnostic
+                    (locStart lp)
+                    (locEnd lp)
+                    Error
+                    ("Unknown reference: @" <> name)
+                ]
+resolveSingle ext _ _ lp | PremiseRef (Just ns) name <- locValue lp =
+  case Map.lookup ns (unExternalContext ext) of
+    Nothing ->
+      Left
+        [ Diagnostic
+            (locStart lp)
+            (locEnd lp)
+            Error
+            ("Unknown namespace: " <> ns)
+        ]
+    Just entry ->
+      case Map.lookup name (nsConclusions entry) of
+        Just prop -> Right (propToH prop)
+        Nothing ->
+          Left
+            [ Diagnostic
+                (locStart lp)
+                (locEnd lp)
+                Error
+                ("Unknown reference: @" <> ns <> "." <> name)
+            ]
+resolveSingle _ _ _ _ = Left []
 
 -- | Build hover text for a proof name span.
 mkProofHover :: SrcPos -> SrcPos -> CheckedProof -> HoverItem
