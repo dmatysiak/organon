@@ -692,9 +692,10 @@ main = hspec $ do
         Left err -> expectationFailure (T.unpack err)
 
     it "resolves @ref conv (simple conversion of E)" $
-      -- Step1 proves No M is P (E proposition).
-      -- Step2 uses @Step1 conv, which should resolve to No P is M.
-      case parseDocument "proof Step1\nNo M is P\nEvery S is M\n∴ No S is P\n\nproof Step2\n@Step1 conv\nEvery S is M\n∴ No S is M\n" of
+      -- Step1 proves No S is P (E proposition).
+      -- Step2 uses @Step1 conv, which should resolve to No P is S.
+      -- Step2 is Celarent: No P is S, Every M is P ∴ No M is S.
+      case parseDocument "proof Step1\nNo M is P\nEvery S is M\n∴ No S is P\n\nproof Step2\n@Step1 conv\nEvery M is P\n∴ No M is S\n" of
         Right doc -> do
           let result = checkDocument (ExternalContext Map.empty) doc
           -- Both proofs should check successfully (no errors).
@@ -733,8 +734,8 @@ main = hspec $ do
     it "reduce action emits @ref conv for reference premise" $
       -- Cesare: No P is M, Every S is M ∴ No S is P
       -- Reduction converts major (simple conv). If major is a ref, should emit @ref conv.
-      -- Step1 proves No P is M. Step2 is Cesare using @Step1 as major.
-      case parseDocument "proof Step1\nNo M is P\nEvery P is M\n∴ No P is M\n\nproof Step2\n@Step1\nEvery S is M\n∴ No S is P\n" of
+      -- Step1 proves No P is M (via Celarent with third term Q). Step2 is Cesare using @Step1 as major.
+      case parseDocument "proof Step1\nNo Q is M\nEvery P is Q\n∴ No P is M\n\nproof Step2\n@Step1\nEvery S is M\n∴ No S is P\n" of
         Right doc -> do
           let result = checkDocument (ExternalContext Map.empty) doc
           let reduces = checkReduces result
