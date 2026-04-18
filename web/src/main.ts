@@ -9,7 +9,7 @@ import {
   type CheckResult,
   type ExternalContext,
 } from "./core/check";
-import { prettyMood } from "./core/pretty";
+import { prettyMood, prettyProposition } from "./core/pretty";
 import { formatText } from "./core/format";
 import { initRepl } from "./repl";
 
@@ -553,6 +553,61 @@ monaco.languages.registerCodeActionProvider(LANG_ID, {
         title: `${prettyMood(fill.holeFillMood)}: ${fill.holeFillLabel}`,
         kind: "quickfix",
         edit: { edits },
+      });
+    }
+
+    // Reduce to Figure 1
+    for (const ra of lastCheckResult.checkReduces) {
+      if (!rangeOverlaps(range, ra.reducePrem1Start, ra.reduceConcEnd))
+        continue;
+
+      const fig1 = ra.reduceResult;
+      actions.push({
+        title: `Reduce ${prettyMood(ra.reduceMood)} to Figure 1`,
+        kind: "refactor.rewrite",
+        edit: {
+          edits: [
+            {
+              resource: model.uri,
+              textEdit: {
+                range: new monaco.Range(
+                  ra.reducePrem1Start.posLine,
+                  ra.reducePrem1Start.posCol,
+                  ra.reducePrem1End.posLine,
+                  ra.reducePrem1End.posCol,
+                ),
+                text: prettyProposition(fig1.major),
+              },
+              versionId: model.getVersionId(),
+            },
+            {
+              resource: model.uri,
+              textEdit: {
+                range: new monaco.Range(
+                  ra.reducePrem2Start.posLine,
+                  ra.reducePrem2Start.posCol,
+                  ra.reducePrem2End.posLine,
+                  ra.reducePrem2End.posCol,
+                ),
+                text: prettyProposition(fig1.minor),
+              },
+              versionId: model.getVersionId(),
+            },
+            {
+              resource: model.uri,
+              textEdit: {
+                range: new monaco.Range(
+                  ra.reduceConcStart.posLine,
+                  ra.reduceConcStart.posCol,
+                  ra.reduceConcEnd.posLine,
+                  ra.reduceConcEnd.posCol,
+                ),
+                text: prettyProposition(fig1.conclusion),
+              },
+              versionId: model.getVersionId(),
+            },
+          ],
+        },
       });
     }
 

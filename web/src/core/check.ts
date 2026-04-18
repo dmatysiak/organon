@@ -18,7 +18,7 @@ import {
   prettyProposition,
   prettySolutionProp,
 } from "./pretty";
-import { reduce } from "./proof";
+import { reduce, reducedSyllogism } from "./proof";
 import { moodSpec } from "./tradition";
 import {
   figure,
@@ -88,6 +88,17 @@ export type HoleFill = {
   readonly holeFillLabel: string;
 };
 
+export type ReduceAction = {
+  readonly reducePrem1Start: SrcPos;
+  readonly reducePrem1End: SrcPos;
+  readonly reducePrem2Start: SrcPos;
+  readonly reducePrem2End: SrcPos;
+  readonly reduceConcStart: SrcPos;
+  readonly reduceConcEnd: SrcPos;
+  readonly reduceMood: Mood;
+  readonly reduceResult: Syllogism;
+};
+
 export type NamespaceEntry = {
   readonly nsFilePath: string;
   readonly nsConclusions: Map<string, Proposition>;
@@ -103,6 +114,7 @@ export type CheckResult = {
   readonly checkDefinitions: DefinitionItem[];
   readonly checkSwaps: SwapAction[];
   readonly checkHoleFills: HoleFill[];
+  readonly checkReduces: ReduceAction[];
 };
 
 // ---------------------------------------------------------------------------
@@ -368,6 +380,28 @@ function mkSwapAction(
   return [];
 }
 
+function mkReduceAction(
+  cp: CheckedProof,
+  prems: Located<Premise>[],
+  conclLoc: Located<PropositionH>,
+): ReduceAction[] {
+  if (prems.length !== 2) return [];
+  const fig1 = reducedSyllogism(cp.checkedMood, cp.checkedSyllogism);
+  if (fig1 === null) return [];
+  return [
+    {
+      reducePrem1Start: prems[0].locStart,
+      reducePrem1End: prems[0].locEnd,
+      reducePrem2Start: prems[1].locStart,
+      reducePrem2End: prems[1].locEnd,
+      reduceConcStart: conclLoc.locStart,
+      reduceConcEnd: conclLoc.locEnd,
+      reduceMood: cp.checkedMood,
+      reduceResult: fig1,
+    },
+  ];
+}
+
 function mkHoleEdits(
   s: SrcPos,
   e: SrcPos,
@@ -581,6 +615,7 @@ export function checkDocument(
   const hovers: HoverItem[] = [];
   const defs: DefinitionItem[] = [];
   const swaps: SwapAction[] = [];
+  const reduces: ReduceAction[] = [];
   const fills: HoleFill[] = [];
 
   const ctx = new Map<string, Proposition>();
@@ -617,6 +652,13 @@ export function checkDocument(
         proofs.push(checked);
         hovers.push(mkProofHover(nameStart, nameEnd, checked));
         swaps.push(...mkSwapAction(checked, block.proofPremises));
+        reduces.push(
+          ...mkReduceAction(
+            checked,
+            block.proofPremises,
+            block.proofConclusion,
+          ),
+        );
       }
     }
   }
@@ -628,5 +670,6 @@ export function checkDocument(
     checkDefinitions: defs,
     checkSwaps: swaps,
     checkHoleFills: fills,
+    checkReduces: reduces,
   };
 }
