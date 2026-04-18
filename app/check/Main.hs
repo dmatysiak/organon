@@ -76,7 +76,7 @@ checkFiles files = do
           [ (feNamespace fe, checkDocument (ExternalContext Map.empty) (feDocument fe))
             | fe <- entries
           ]
-      emptyResult = CheckResult [] [] [] [] [] []
+      emptyResult = CheckResult [] [] [] [] [] [] []
       extContext =
         Map.fromList
           [ ( feNamespace fe,

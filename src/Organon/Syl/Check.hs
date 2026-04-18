@@ -9,6 +9,7 @@ module Organon.Syl.Check
     SwapAction (..),
     HoleFill (..),
     HoleFillEdit (..),
+    ReduceAction (..),
     ExternalContext (..),
     NamespaceEntry (..),
 
@@ -23,7 +24,7 @@ import Data.Text (Text)
 import Organon.Syl.Document
 import Organon.Syl.Hole (PropTypeH (..), PropositionH (..), Solution (..), SolutionProp (..), SyllogismH (..), TermH (..), solve)
 import Organon.Syl.Pretty (figureLabels, prettyFigure, prettyMood, prettyProof, prettyProposition, prettySolutionProp, showText)
-import Organon.Syl.Proof (reduce)
+import Organon.Syl.Proof (reduce, reducedSyllogism)
 import Organon.Syl.Tradition (MoodSpec (..), moodSpec)
 import Organon.Syl.Types
 import Organon.Syl.Validity
@@ -95,6 +96,19 @@ data HoleFill = HoleFill
   }
   deriving stock (Eq, Show)
 
+-- | A code action to reduce a syllogism to its Figure I (perfect) form.
+data ReduceAction = ReduceAction
+  { reducePrem1Start :: SrcPos,
+    reducePrem1End   :: SrcPos,
+    reducePrem2Start :: SrcPos,
+    reducePrem2End   :: SrcPos,
+    reduceConcStart  :: SrcPos,
+    reduceConcEnd    :: SrcPos,
+    reduceMood       :: Mood,
+    reduceResult     :: Syllogism
+  }
+  deriving stock (Eq, Show)
+
 -- | Per-namespace entry in the external context.
 data NamespaceEntry = NamespaceEntry
   { nsFilePath    :: FilePath
@@ -115,23 +129,25 @@ data CheckResult = CheckResult
     checkHovers :: [HoverItem],
     checkDefinitions :: [DefinitionItem],
     checkSwaps :: [SwapAction],
-    checkHoleFills :: [HoleFill]
+    checkHoleFills :: [HoleFill],
+    checkReduces :: [ReduceAction]
   }
   deriving stock (Eq, Show)
 
 -- | Accumulator for the document-checking loop.
 data CheckAcc = CheckAcc
-  { accDiags  :: [Diagnostic]
-  , accProofs :: [CheckedProof]
-  , accHovers :: [HoverItem]
-  , accDefs   :: [DefinitionItem]
-  , accSwaps  :: [SwapAction]
-  , accFills  :: [HoleFill]
+  { accDiags   :: [Diagnostic]
+  , accProofs  :: [CheckedProof]
+  , accHovers  :: [HoverItem]
+  , accDefs    :: [DefinitionItem]
+  , accSwaps   :: [SwapAction]
+  , accFills   :: [HoleFill]
+  , accReduces :: [ReduceAction]
   }
   deriving stock (Show)
 
 emptyAcc :: CheckAcc
-emptyAcc = CheckAcc [] [] [] [] [] []
+emptyAcc = CheckAcc [] [] [] [] [] [] []
 
 -- | Check a parsed document: resolve references, validate syllogisms,
 -- and collect diagnostics.
@@ -157,6 +173,7 @@ checkDocument ext doc =
         (reverse (accDefs acc))
         (reverse (accSwaps acc))
         (reverse (accFills acc))
+        (reverse (accReduces acc))
   where
     go _ _ _ _ acc [] = acc
     go trad opens ctx locs acc (lp : rest) =
@@ -182,6 +199,7 @@ checkDocument ext doc =
                   locs' = Map.insert name (nameStart, nameEnd) locs
                   proofHover = mkProofHover nameStart nameEnd checked
                   newSwaps = mkSwapAction checked (proofPremises block)
+                  newReduces = mkReduceAction checked (proofPremises block) (proofConclusion block)
                in if Map.member name ctx
                     then
                       let d =
@@ -198,6 +216,7 @@ checkDocument ext doc =
                                , accHovers = refHovers ++ (proofHover : accHovers acc)
                                , accDefs   = refDefs ++ accDefs acc
                                , accSwaps  = newSwaps ++ accSwaps acc
+                               , accReduces = newReduces ++ accReduces acc
                                }
                            rest
 
@@ -466,4 +485,18 @@ mkSwapAction cp prems
   | checkedSwapped cp,
     [p1, p2] <- prems =
       [SwapAction (locStart p1) (locEnd p1) (locStart p2) (locEnd p2)]
+  | otherwise = []
+
+-- | Emit a reduce action for non-Figure-I syllogisms that can be reduced.
+mkReduceAction :: CheckedProof -> [Located Premise] -> Located PropositionH -> [ReduceAction]
+mkReduceAction cp prems conclLoc
+  | [p1, p2] <- prems,
+    Just fig1 <- reducedSyllogism (checkedMood cp) (checkedSyllogism cp) =
+      [ ReduceAction
+          (locStart p1) (locEnd p1)
+          (locStart p2) (locEnd p2)
+          (locStart conclLoc) (locEnd conclLoc)
+          (checkedMood cp)
+          fig1
+      ]
   | otherwise = []

@@ -1,5 +1,6 @@
 module Organon.Syl.Proof
   ( reduce,
+    reducedSyllogism,
   )
 where
 
@@ -155,6 +156,74 @@ reduce Calemos syl =
   reduceSubaltern Camenes E syl
 
 -- Helpers
+
+-- | Compute the Figure I syllogism that a mood reduces to.
+-- Returns 'Nothing' for Figure I moods (already Figure I) and reductio
+-- moods (Baroco, Bocardo) which have no direct Figure I equivalent.
+reducedSyllogism :: Mood -> Syllogism -> Maybe Syllogism
+-- Figure I: already there.
+reducedSyllogism Barbara _ = Nothing
+reducedSyllogism Celarent _ = Nothing
+reducedSyllogism Darii _ = Nothing
+reducedSyllogism Ferio _ = Nothing
+-- Figure II
+reducedSyllogism Cesare (Syllogism maj min_ concl) =
+  Just $ Syllogism (swapTerms maj) min_ concl
+reducedSyllogism Camestres (Syllogism maj min_ _) =
+  let min' = swapTerms min_
+      derivedConcl = Proposition E (subject maj) (predicate min')
+   in Just $ Syllogism min' maj derivedConcl
+reducedSyllogism Festino (Syllogism maj min_ concl) =
+  Just $ Syllogism (swapTerms maj) min_ concl
+reducedSyllogism Baroco _ = Nothing
+-- Figure III
+reducedSyllogism Darapti (Syllogism maj min_ concl) =
+  let min' = Proposition I (predicate min_) (subject min_)
+   in Just $ Syllogism maj min' concl
+reducedSyllogism Disamis (Syllogism maj min_ _) =
+  let maj' = swapTerms maj
+      derivedConcl = Proposition I (subject min_) (predicate maj')
+   in Just $ Syllogism min_ maj' derivedConcl
+reducedSyllogism Datisi (Syllogism maj min_ concl) =
+  Just $ Syllogism maj (swapTerms min_) concl
+reducedSyllogism Felapton (Syllogism maj min_ concl) =
+  let min' = Proposition I (predicate min_) (subject min_)
+   in Just $ Syllogism maj min' concl
+reducedSyllogism Bocardo _ = Nothing
+reducedSyllogism Ferison (Syllogism maj min_ concl) =
+  Just $ Syllogism maj (swapTerms min_) concl
+-- Figure IV
+reducedSyllogism Bramantip (Syllogism maj min_ _) =
+  let derivedConcl = Proposition A (subject maj) (predicate min_)
+   in Just $ Syllogism min_ maj derivedConcl
+reducedSyllogism Camenes (Syllogism maj min_ _) =
+  let derivedConcl = Proposition E (subject maj) (predicate min_)
+   in Just $ Syllogism min_ maj derivedConcl
+reducedSyllogism Dimaris (Syllogism maj min_ _) =
+  let derivedConcl = Proposition I (subject maj) (predicate min_)
+   in Just $ Syllogism min_ maj derivedConcl
+reducedSyllogism Fesapo (Syllogism maj min_ concl) =
+  let maj' = swapTerms maj
+      min' = Proposition I (predicate min_) (subject min_)
+   in Just $ Syllogism maj' min' concl
+reducedSyllogism Fresison (Syllogism maj min_ concl) =
+  Just $ Syllogism (swapTerms maj) (swapTerms min_) concl
+-- Subaltern moods: reduce parent, then subalternate.
+reducedSyllogism Barbari syl = reducedSubaltern Barbara A syl
+reducedSyllogism Celaront syl = reducedSubaltern Celarent E syl
+reducedSyllogism Cesaro syl = reducedSubaltern Cesare E syl
+reducedSyllogism Camestrop syl = reducedSubaltern Camestres E syl
+reducedSyllogism Calemos syl = reducedSubaltern Camenes E syl
+
+-- | Reduce a subaltern mood by reducing the parent mood with a stronger
+-- conclusion, then using the stronger conclusion.
+reducedSubaltern :: Mood -> PropType -> Syllogism -> Maybe Syllogism
+reducedSubaltern parent strongType (Syllogism maj min_ concl) =
+  let strongConcl = Proposition strongType (subject concl) (predicate concl)
+      parentSyl = Syllogism maj min_ strongConcl
+   in case reducedSyllogism parent parentSyl of
+        Just s -> Just s
+        Nothing -> Just parentSyl
 
 -- | Swap subject and predicate of a proposition, keeping the type.
 swapTerms :: Proposition -> Proposition

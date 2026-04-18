@@ -163,10 +163,20 @@ handleProve trad input =
         Valid mood -> do
           let steps = reduce mood syl
           liftIO $ TIO.putStrLn $ prettyProof mood steps
+          printReduced mood syl
         ValidSwapped mood swapped -> do
           liftIO $ TIO.putStrLn "(premises swapped)"
           let steps = reduce mood swapped
           liftIO $ TIO.putStrLn $ prettyProof mood steps
+          printReduced mood swapped
+
+printReduced :: Mood -> Syllogism -> InputT IO ()
+printReduced mood syl =
+  case reducedSyllogism mood syl of
+    Nothing -> pure ()
+    Just fig1 -> do
+      liftIO $ TIO.putStrLn $ "Figure 1 form:"
+      liftIO $ TIO.putStrLn $ prettySyllogism fig1
 
 handleMoodInfo :: Tradition -> Text -> InputT IO ()
 handleMoodInfo trad name =

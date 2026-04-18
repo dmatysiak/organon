@@ -1,6 +1,6 @@
 // Interactive REPL — ported from Organon.Syl.Repl
 
-import { Mood, Tradition } from "./core/types";
+import { Mood, Syllogism, Tradition } from "./core/types";
 import {
   moodSpec,
   requiresExistentialImport,
@@ -8,7 +8,7 @@ import {
   validMoods,
 } from "./core/tradition";
 import { validate } from "./core/validity";
-import { reduce } from "./core/proof";
+import { reduce, reducedSyllogism } from "./core/proof";
 import { solve } from "./core/hole";
 import { parseSyllogism, parseSyllogismH, ParseError } from "./core/parser";
 import {
@@ -18,6 +18,7 @@ import {
   prettyFigure,
   prettyProof,
   prettySolution,
+  prettySyllogism,
 } from "./core/pretty";
 
 // -- State -------------------------------------------------------------------
@@ -126,6 +127,15 @@ function handleValidate(input: string): OutputLine[] {
   }
 }
 
+function reducedLines(mood: Mood, syl: Syllogism): OutputLine[] {
+  const fig1 = reducedSyllogism(mood, syl);
+  if (fig1 === null) return [];
+  return [
+    info("Figure 1 form:"),
+    ...prettySyllogism(fig1).split("\n").map(result),
+  ];
+}
+
 function handleProve(input: string): OutputLine[] {
   const parsed = parseSyllogism(input);
   if (parsed instanceof ParseError) {
@@ -137,13 +147,17 @@ function handleProve(input: string): OutputLine[] {
       return [err(`Invalid: ${res.message}`)];
     case "Valid": {
       const steps = reduce(res.mood, parsed);
-      return prettyProof(res.mood, steps).split("\n").map(result);
+      return [
+        ...prettyProof(res.mood, steps).split("\n").map(result),
+        ...reducedLines(res.mood, parsed),
+      ];
     }
     case "ValidSwapped": {
       const steps = reduce(res.mood, res.syllogism);
       return [
         info("(premises swapped)"),
         ...prettyProof(res.mood, steps).split("\n").map(result),
+        ...reducedLines(res.mood, res.syllogism),
       ];
     }
   }

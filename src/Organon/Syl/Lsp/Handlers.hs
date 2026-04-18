@@ -17,7 +17,8 @@ import qualified Organon.Syl.Check as Check
 import Organon.Syl.Document (SrcPos (..))
 import Organon.Syl.Lsp.State (FileEntry (..), WorkspaceState, docOpenNames, getCheckResult)
 import Organon.Syl.Lsp.Util (findDefinition, findHover, toLspPos)
-import Organon.Syl.Pretty (prettyMood)
+import Organon.Syl.Pretty (prettyMood, prettyProposition)
+import Organon.Syl.Types (Syllogism (..))
 
 -- | Look up hover info for a position in a document.
 hoverAt :: TVar WorkspaceState -> NormalizedUri -> Position -> LspM () (Hover |? Null)
@@ -86,7 +87,8 @@ codeActionsAt stateVar nuri uri (Range (Position l1 _) (Position l2 _)) = do
               lineEnd = fromIntegral l2 + 1
               swapActions = concatMap (mkSwapCodeAction uri txt lineStart lineEnd) (Check.checkSwaps result)
               fillActions = concatMap (mkHoleFillCodeAction uri lineStart lineEnd) (Check.checkHoleFills result)
-              actions = swapActions ++ fillActions
+              reduceActions = concatMap (mkReduceCodeAction uri lineStart lineEnd) (Check.checkReduces result)
+              actions = swapActions ++ fillActions ++ reduceActions
            in pure $ if null actions then InR Null else InL actions
 
 -- | Build a code action for a swap if it overlaps the given line range.
@@ -158,6 +160,44 @@ mkHoleFillCodeAction uri lineStart lineEnd fill
       CodeAction
         { _title = "Fill: " <> Check.holeFillLabel fill <> " (" <> prettyMood (Check.holeFillMood fill) <> ")",
           _kind = Just CodeActionKind_QuickFix,
+          _diagnostics = Nothing,
+          _isPreferred = Nothing,
+          _disabled = Nothing,
+          _edit = Just edit,
+          _command = Nothing,
+          _data_ = Nothing
+        }
+
+-- | Build a code action to reduce a syllogism to Figure I if it overlaps the given line range.
+mkReduceCodeAction :: Uri -> Int -> Int -> Check.ReduceAction -> [Command |? CodeAction]
+mkReduceCodeAction uri lineStart lineEnd ra
+  | overlaps = [InR action]
+  | otherwise = []
+  where
+    p1s = Check.reducePrem1Start ra
+    p1e = Check.reducePrem1End ra
+    p2s = Check.reducePrem2Start ra
+    p2e = Check.reducePrem2End ra
+    cs  = Check.reduceConcStart ra
+    ce  = Check.reduceConcEnd ra
+    fig1 = Check.reduceResult ra
+    overlaps =
+      posLine p1s <= lineEnd && posLine ce >= lineStart
+    textEdits =
+      [ TextEdit (Range (toLspPos p1s) (toLspPos p1e)) (prettyProposition (major fig1)),
+        TextEdit (Range (toLspPos p2s) (toLspPos p2e)) (prettyProposition (minor fig1)),
+        TextEdit (Range (toLspPos cs) (toLspPos ce)) (prettyProposition (conclusion fig1))
+      ]
+    edit =
+      WorkspaceEdit
+        { _changes = Just (Map.singleton uri textEdits),
+          _documentChanges = Nothing,
+          _changeAnnotations = Nothing
+        }
+    action =
+      CodeAction
+        { _title = "Reduce " <> prettyMood (Check.reduceMood ra) <> " to Figure 1",
+          _kind = Just CodeActionKind_RefactorRewrite,
           _diagnostics = Nothing,
           _isPreferred = Nothing,
           _disabled = Nothing,
