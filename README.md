@@ -14,7 +14,7 @@ stack build
 stack exec organon-syl-repl
 ```
 
-The REPL supports validation, proof by reduction to Figure 1, and
+The REPL supports validation, proof by reduction to Figure 1 and
 hole-based solving. Type `:help` for commands.
 
 ```
@@ -158,7 +158,7 @@ stack test
 
 ## VS Code extension
 
-The extension in `editors/vscode/` provides syntax highlighting, snippets,
+The extension in `editors/vscode/` provides syntax highlighting, snippets
 and an LSP client that auto-starts the server when you open a `.syl` file.
 
 ### Building the extension

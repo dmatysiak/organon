@@ -15,6 +15,16 @@
     "body": "∴",
     "description": "Insert the ∴ (therefore) symbol"
   },
+  "Therefore (abbreviation)": {
+    "prefix": "\\tf",
+    "body": "∴",
+    "description": "Insert the ∴ (therefore) symbol"
+  },
+  "Therefore (long abbreviation)": {
+    "prefix": "\\therefore",
+    "body": "∴",
+    "description": "Insert the ∴ (therefore) symbol"
+  },
   "Open namespace": {
     "prefix": "open",
     "body": "open ${1:Namespace}",
