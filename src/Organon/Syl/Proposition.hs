@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Organon.Syl.Proposition
   ( simpleConversion,
     conversionPerAccidens,

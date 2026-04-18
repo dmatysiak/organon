@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Organon.Syl.Pretty
   ( prettyTerm,
     prettyPropType,
@@ -59,7 +57,30 @@ prettyFigure FigIV = "4"
 
 -- | Render a mood name.
 prettyMood :: Mood -> Text
-prettyMood = T.pack . show
+prettyMood Barbara = "Barbara"
+prettyMood Celarent = "Celarent"
+prettyMood Darii = "Darii"
+prettyMood Ferio = "Ferio"
+prettyMood Cesare = "Cesare"
+prettyMood Camestres = "Camestres"
+prettyMood Festino = "Festino"
+prettyMood Baroco = "Baroco"
+prettyMood Darapti = "Darapti"
+prettyMood Disamis = "Disamis"
+prettyMood Datisi = "Datisi"
+prettyMood Felapton = "Felapton"
+prettyMood Bocardo = "Bocardo"
+prettyMood Ferison = "Ferison"
+prettyMood Bramantip = "Bramantip"
+prettyMood Camenes = "Camenes"
+prettyMood Dimaris = "Dimaris"
+prettyMood Fesapo = "Fesapo"
+prettyMood Fresison = "Fresison"
+prettyMood Barbari = "Barbari"
+prettyMood Celaront = "Celaront"
+prettyMood Cesaro = "Cesaro"
+prettyMood Camestrop = "Camestrop"
+prettyMood Calemos = "Calemos"
 
 -- | Render a tradition name.
 prettyTradition :: Tradition -> Text

@@ -29,8 +29,14 @@ library
   exposed-modules:
       Organon.Syl.Check
       Organon.Syl.Document
+      Organon.Syl.FileUtil
       Organon.Syl.Hole
       Organon.Syl.Lsp
+      Organon.Syl.Lsp.Format
+      Organon.Syl.Lsp.Handlers
+      Organon.Syl.Lsp.State
+      Organon.Syl.Lsp.Util
+      Organon.Syl.Parser
       Organon.Syl.Pretty
       Organon.Syl.Proof
       Organon.Syl.Proposition
@@ -44,6 +50,11 @@ library
       Paths_organon_syl
   hs-source-dirs:
       src
+  default-extensions:
+      DerivingStrategies
+      DuplicateRecordFields
+      OverloadedStrings
+      StrictData
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
       base >=4.7 && <5
@@ -58,7 +69,7 @@ library
     , parser-combinators
     , stm
     , text
-  default-language: Haskell2010
+  default-language: GHC2021
 
 executable organon-syl-check
   main-is: Main.hs
@@ -68,6 +79,11 @@ executable organon-syl-check
       Paths_organon_syl
   hs-source-dirs:
       app/check
+  default-extensions:
+      DerivingStrategies
+      DuplicateRecordFields
+      OverloadedStrings
+      StrictData
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
@@ -83,7 +99,7 @@ executable organon-syl-check
     , parser-combinators
     , stm
     , text
-  default-language: Haskell2010
+  default-language: GHC2021
 
 executable organon-syl-lsp
   main-is: Main.hs
@@ -93,6 +109,11 @@ executable organon-syl-lsp
       Paths_organon_syl
   hs-source-dirs:
       app/lsp
+  default-extensions:
+      DerivingStrategies
+      DuplicateRecordFields
+      OverloadedStrings
+      StrictData
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
@@ -108,7 +129,7 @@ executable organon-syl-lsp
     , parser-combinators
     , stm
     , text
-  default-language: Haskell2010
+  default-language: GHC2021
 
 executable organon-syl-repl
   main-is: Main.hs
@@ -118,6 +139,11 @@ executable organon-syl-repl
       Paths_organon_syl
   hs-source-dirs:
       app/repl
+  default-extensions:
+      DerivingStrategies
+      DuplicateRecordFields
+      OverloadedStrings
+      StrictData
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
@@ -133,7 +159,7 @@ executable organon-syl-repl
     , parser-combinators
     , stm
     , text
-  default-language: Haskell2010
+  default-language: GHC2021
 
 test-suite organon-syl-test
   type: exitcode-stdio-1.0
@@ -144,6 +170,11 @@ test-suite organon-syl-test
       Paths_organon_syl
   hs-source-dirs:
       test
+  default-extensions:
+      DerivingStrategies
+      DuplicateRecordFields
+      OverloadedStrings
+      StrictData
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
@@ -160,4 +191,4 @@ test-suite organon-syl-test
     , parser-combinators
     , stm
     , text
-  default-language: Haskell2010
+  default-language: GHC2021

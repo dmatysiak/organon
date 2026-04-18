@@ -17,7 +17,7 @@ data MoodSpec = MoodSpec
     minorPropType :: PropType,
     conclusionPropType :: PropType
   }
-  deriving (Eq, Ord, Show)
+  deriving stock (Eq, Ord, Show)
 
 -- | Map each mood to its figure and PropType triple.
 moodSpec :: Mood -> MoodSpec
@@ -57,7 +57,26 @@ requiresExistentialImport Darapti = True
 requiresExistentialImport Felapton = True
 requiresExistentialImport Bramantip = True
 requiresExistentialImport Fesapo = True
-requiresExistentialImport _ = False
+requiresExistentialImport Barbara = False
+requiresExistentialImport Celarent = False
+requiresExistentialImport Darii = False
+requiresExistentialImport Ferio = False
+requiresExistentialImport Cesare = False
+requiresExistentialImport Camestres = False
+requiresExistentialImport Festino = False
+requiresExistentialImport Baroco = False
+requiresExistentialImport Disamis = False
+requiresExistentialImport Datisi = False
+requiresExistentialImport Bocardo = False
+requiresExistentialImport Ferison = False
+requiresExistentialImport Camenes = False
+requiresExistentialImport Dimaris = False
+requiresExistentialImport Fresison = False
+requiresExistentialImport Barbari = False
+requiresExistentialImport Celaront = False
+requiresExistentialImport Cesaro = False
+requiresExistentialImport Camestrop = False
+requiresExistentialImport Calemos = False
 
 -- | Is this a subaltern mood (weakened conclusion)?
 isSubaltern :: Mood -> Bool
@@ -66,7 +85,25 @@ isSubaltern Celaront = True
 isSubaltern Cesaro = True
 isSubaltern Camestrop = True
 isSubaltern Calemos = True
-isSubaltern _ = False
+isSubaltern Barbara = False
+isSubaltern Celarent = False
+isSubaltern Darii = False
+isSubaltern Ferio = False
+isSubaltern Cesare = False
+isSubaltern Camestres = False
+isSubaltern Festino = False
+isSubaltern Baroco = False
+isSubaltern Darapti = False
+isSubaltern Disamis = False
+isSubaltern Datisi = False
+isSubaltern Felapton = False
+isSubaltern Bocardo = False
+isSubaltern Ferison = False
+isSubaltern Bramantip = False
+isSubaltern Camenes = False
+isSubaltern Dimaris = False
+isSubaltern Fesapo = False
+isSubaltern Fresison = False
 
 -- | All valid moods for a given tradition.
 validMoods :: Tradition -> [Mood]

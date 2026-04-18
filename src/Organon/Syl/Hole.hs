@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Organon.Syl.Hole
   ( TermH (..),
     PropTypeH (..),
@@ -17,18 +15,18 @@ import Organon.Syl.Types
 
 -- | A term that may be a hole.
 data TermH = ConcreteT Term | HoleT
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 -- | A proposition type that may be a hole.
 data PropTypeH = ConcretePT PropType | HolePT
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 -- | A proposition that may contain holes at any level,
 -- or be entirely unknown.
 data PropositionH
   = PropH PropTypeH TermH TermH
   | WholePropH
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 -- | A syllogism with possible holes.
 data SyllogismH = SylH
@@ -36,7 +34,7 @@ data SyllogismH = SylH
     minorH :: PropositionH,
     conclusionH :: PropositionH
   }
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 -- | A proposition in a solution, where terms may be unresolved.
 -- 'Nothing' means the role was unconstrained (a meta-variable).
@@ -45,7 +43,7 @@ data SolutionProp = SolutionProp
     solSubject :: Maybe Term,
     solPredicate :: Maybe Term
   }
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 -- | A solution: a mood and the (possibly partially-filled) syllogism.
 data Solution = Solution
@@ -54,11 +52,11 @@ data Solution = Solution
     solMinor :: SolutionProp,
     solConclusion :: SolutionProp
   }
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 -- Term roles in a syllogism.
 data Role = RoleS | RoleP | RoleM
-  deriving (Eq, Ord, Show)
+  deriving stock (Eq, Ord, Show)
 
 -- | The role assignments for each term position given a figure.
 figureRoles :: Figure -> ((Role, Role), (Role, Role), (Role, Role))

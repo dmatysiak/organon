@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Main (main) where
 
 import qualified Data.Map.Strict as Map
@@ -11,7 +9,7 @@ import Organon.Syl.Hole
 import Organon.Syl.Pretty
 import Organon.Syl.Proof
 import Organon.Syl.Proposition
-import Organon.Syl.Repl (parseProposition, parsePropositionH, parseSyllogism, parseSyllogismH)
+import Organon.Syl.Parser (parseProposition, parsePropositionH, parseSyllogism, parseSyllogismH)
 import Organon.Syl.Tradition
 import Organon.Syl.Types
 import Organon.Syl.Validity
@@ -193,7 +191,7 @@ main = hspec $ do
       case validate Full syl of
         ValidSwapped mood _ -> mood `shouldBe` Darii
         Valid _ -> expectationFailure "Should be ValidSwapped, not Valid"
-        Invalid msg -> expectationFailure $ "Should be valid: " ++ msg
+        Invalid msg -> expectationFailure $ "Should be valid: " ++ T.unpack msg
 
   describe "Proposition operations" $ do
     it "simple conversion of E" $
@@ -410,13 +408,13 @@ main = hspec $ do
           let block = locValue (head (docProofs doc))
           locValue (proofName block) `shouldBe` "Barbara"
           length (proofPremises block) `shouldBe` 2
-        Left err -> expectationFailure err
+        Left err -> expectationFailure (T.unpack err)
 
     it "parses tradition directive" $
       case parseDocument "tradition Strict\n\nproof Barbara\nEvery M is P\nEvery S is M\n∴ Every S is P\n" of
         Right doc ->
           fmap locValue (docTradition doc) `shouldBe` Just Strict
-        Left err -> expectationFailure err
+        Left err -> expectationFailure (T.unpack err)
 
     it "parses @reference premises" $
       case parseDocument "proof A\nEvery M is P\nEvery S is M\n∴ Every S is P\n\nproof B\n@A\nNo S is P\n∴ No S is P\n" of
@@ -426,12 +424,12 @@ main = hspec $ do
           case locValue (head (proofPremises block2)) of
             PremiseRef _ name -> name `shouldBe` "A"
             PremiseProp _ -> expectationFailure "Expected PremiseRef"
-        Left err -> expectationFailure err
+        Left err -> expectationFailure (T.unpack err)
 
     it "parses 'therefore' as conclusion marker" $
       case parseDocument "proof Barbara\nEvery M is P\nEvery S is M\ntherefore Every S is P\n" of
         Right doc -> length (docProofs doc) `shouldBe` 1
-        Left err -> expectationFailure err
+        Left err -> expectationFailure (T.unpack err)
 
     it "rejects malformed document" $
       case parseDocument "not a valid document\n" of
@@ -441,21 +439,21 @@ main = hspec $ do
     it "handles line comments" $
       case parseDocument "-- A comment\nproof Barbara\nEvery M is P\nEvery S is M\n∴ Every S is P\n" of
         Right doc -> length (docProofs doc) `shouldBe` 1
-        Left err -> expectationFailure err
+        Left err -> expectationFailure (T.unpack err)
 
     it "parses open directives" $
       case parseDocument "open Basics\n\nproof Step1\nEvery M is P\nEvery S is M\n∴ Every S is P\n" of
         Right doc -> do
           length (docOpens doc) `shouldBe` 1
           locValue (head (docOpens doc)) `shouldBe` "Basics"
-        Left err -> expectationFailure err
+        Left err -> expectationFailure (T.unpack err)
 
     it "parses multiple open directives" $
       case parseDocument "open Basics\nopen Advanced\n\nproof Step1\nEvery M is P\nEvery S is M\n∴ Every S is P\n" of
         Right doc -> do
           length (docOpens doc) `shouldBe` 2
           map locValue (docOpens doc) `shouldBe` ["Basics", "Advanced"]
-        Left err -> expectationFailure err
+        Left err -> expectationFailure (T.unpack err)
 
     it "parses qualified @Ns.Name references" $
       case parseDocument "proof Step1\n@Basics.Barbara\nEvery S is M\n∴ Every S is P\n" of
@@ -466,7 +464,7 @@ main = hspec $ do
               ns `shouldBe` "Basics"
               name `shouldBe` "Barbara"
             _ -> expectationFailure "Expected qualified PremiseRef"
-        Left err -> expectationFailure err
+        Left err -> expectationFailure (T.unpack err)
 
     it "parses unqualified @Name as PremiseRef Nothing" $
       case parseDocument "proof Step1\n@Barbara\nEvery S is M\n∴ Every S is P\n" of
@@ -475,130 +473,133 @@ main = hspec $ do
           case locValue (head (proofPremises block)) of
             PremiseRef Nothing name -> name `shouldBe` "Barbara"
             _ -> expectationFailure "Expected unqualified PremiseRef"
-        Left err -> expectationFailure err
+        Left err -> expectationFailure (T.unpack err)
 
   describe "Document checker" $ do
     it "checks a valid Barbara syllogism" $
       case parseDocument "proof Barbara\nEvery M is P\nEvery S is M\n∴ Every S is P\n" of
         Right doc -> do
-          let result = checkDocument Map.empty doc
+          let result = checkDocument (ExternalContext Map.empty) doc
           checkDiagnostics result `shouldBe` []
           length (checkProofs result) `shouldBe` 1
           checkedMood (head (checkProofs result)) `shouldBe` Barbara
-        Left err -> expectationFailure err
+        Left err -> expectationFailure (T.unpack err)
 
     it "reports error for invalid syllogism" $
       case parseDocument "proof Bad\nEvery M is P\nEvery S is P\n∴ Every S is M\n" of
         Right doc -> do
-          let result = checkDocument Map.empty doc
+          let result = checkDocument (ExternalContext Map.empty) doc
           checkDiagnostics result `shouldSatisfy` (not . null)
           diagSeverity (head (checkDiagnostics result)) `shouldBe` Organon.Syl.Check.Error
-        Left err -> expectationFailure err
+        Left err -> expectationFailure (T.unpack err)
 
     it "resolves @references to prior conclusions" $
       case parseDocument "proof Step1\nEvery M is P\nEvery S is M\n∴ Every S is P\n\nproof Step2\n@Step1\nEvery P is M\n∴ Every S is M\n" of
         Right doc -> do
-          let result = checkDocument Map.empty doc
+          let result = checkDocument (ExternalContext Map.empty) doc
           -- Step1 valid, Step2 uses its conclusion
           length (checkProofs result) `shouldBe` 2
-        Left err -> expectationFailure err
+        Left err -> expectationFailure (T.unpack err)
 
     it "reports error for unknown reference" $
       case parseDocument "proof Bad\n@NoSuchProof\nEvery S is M\n∴ Every S is P\n" of
         Right doc -> do
-          let result = checkDocument Map.empty doc
+          let result = checkDocument (ExternalContext Map.empty) doc
           checkDiagnostics result `shouldSatisfy` any (\d -> "Unknown reference" `T.isInfixOf` diagMessage d)
-        Left err -> expectationFailure err
+        Left err -> expectationFailure (T.unpack err)
 
     it "reports error for duplicate proof name" $
       case parseDocument "proof Dup\nEvery M is P\nEvery S is M\n∴ Every S is P\n\nproof Dup\nNo M is P\nEvery S is M\n∴ No S is P\n" of
         Right doc -> do
-          let result = checkDocument Map.empty doc
+          let result = checkDocument (ExternalContext Map.empty) doc
           checkDiagnostics result `shouldSatisfy` any (\d -> "Duplicate" `T.isInfixOf` diagMessage d)
-        Left err -> expectationFailure err
+        Left err -> expectationFailure (T.unpack err)
 
     it "reports error for wrong premise count" $
       case parseDocument "proof Bad\nEvery M is P\n∴ Every S is P\n" of
         Right doc -> do
-          let result = checkDocument Map.empty doc
+          let result = checkDocument (ExternalContext Map.empty) doc
           checkDiagnostics result `shouldSatisfy` any (\d -> "Expected 2 premises" `T.isInfixOf` diagMessage d)
-        Left err -> expectationFailure err
+        Left err -> expectationFailure (T.unpack err)
 
     it "respects tradition directive" $
       case parseDocument "tradition Strict\n\nproof Bramantip\nEvery P is M\nEvery M is S\n∴ Some S is P\n" of
         Right doc -> do
-          let result = checkDocument Map.empty doc
+          let result = checkDocument (ExternalContext Map.empty) doc
           -- Bramantip requires existential import, not in Strict
           checkDiagnostics result `shouldSatisfy` (not . null)
-        Left err -> expectationFailure err
+        Left err -> expectationFailure (T.unpack err)
 
     it "produces hover items for proof names" $
       case parseDocument "proof Barbara\nEvery M is P\nEvery S is M\n∴ Every S is P\n" of
         Right doc -> do
-          let result = checkDocument Map.empty doc
+          let result = checkDocument (ExternalContext Map.empty) doc
           checkHovers result `shouldSatisfy` any (\h -> "Barbara" `elem` words' (hoverText h))
-        Left err -> expectationFailure err
+        Left err -> expectationFailure (T.unpack err)
 
     it "produces hover items for @references" $
       case parseDocument "proof Step1\nEvery M is P\nEvery S is M\n∴ Every S is P\n\nproof Step2\n@Step1\nEvery P is M\n∴ Every S is M\n" of
         Right doc -> do
-          let result = checkDocument Map.empty doc
+          let result = checkDocument (ExternalContext Map.empty) doc
           checkHovers result `shouldSatisfy` any (\h -> "every S is P" `elem` segments (hoverText h))
-        Left err -> expectationFailure err
+        Left err -> expectationFailure (T.unpack err)
 
     it "resolves qualified @Ns.Name from external context" $
       let ext =
-            Map.singleton
-              "Basics"
-              ( "basics.syl",
-                Map.singleton "Barbara" (Proposition A m p),
-                Map.singleton "Barbara" (SrcPos 1 7, SrcPos 1 14)
-              )
+            ExternalContext $
+              Map.singleton
+                "Basics"
+                (NamespaceEntry
+                  "basics.syl"
+                  (Map.singleton "Barbara" (Proposition A m p))
+                  (Map.singleton "Barbara" (SrcPos 1 7, SrcPos 1 14)))
        in case parseDocument "proof Step1\n@Basics.Barbara\nEvery S is M\n∴ Every S is P\n" of
             Right doc -> do
               let result = checkDocument ext doc
               checkDiagnostics result `shouldSatisfy` null
-            Left err -> expectationFailure err
+            Left err -> expectationFailure (T.unpack err)
 
     it "resolves unqualified @Name via open" $
       let ext =
-            Map.singleton
-              "Basics"
-              ( "basics.syl",
-                Map.singleton "Barbara" (Proposition A m p),
-                Map.singleton "Barbara" (SrcPos 1 7, SrcPos 1 14)
-              )
+            ExternalContext $
+              Map.singleton
+                "Basics"
+                (NamespaceEntry
+                  "basics.syl"
+                  (Map.singleton "Barbara" (Proposition A m p))
+                  (Map.singleton "Barbara" (SrcPos 1 7, SrcPos 1 14)))
        in case parseDocument "open Basics\n\nproof Step1\n@Barbara\nEvery S is M\n∴ Every S is P\n" of
             Right doc -> do
               let result = checkDocument ext doc
               checkDiagnostics result `shouldSatisfy` null
-            Left err -> expectationFailure err
+            Left err -> expectationFailure (T.unpack err)
 
     it "reports unknown namespace in qualified ref" $
       case parseDocument "proof Step1\n@NoSuch.Barbara\nEvery S is M\n∴ Every S is P\n" of
         Right doc -> do
-          let result = checkDocument Map.empty doc
+          let result = checkDocument (ExternalContext Map.empty) doc
           checkDiagnostics result `shouldSatisfy` any (\d -> "Unknown namespace" `T.isInfixOf` diagMessage d)
-        Left err -> expectationFailure err
+        Left err -> expectationFailure (T.unpack err)
 
     it "reports unknown namespace in open directive" $
       case parseDocument "open NoSuch\n\nproof Step1\nEvery M is P\nEvery S is M\n∴ Every S is P\n" of
         Right doc -> do
-          let result = checkDocument Map.empty doc
+          let result = checkDocument (ExternalContext Map.empty) doc
           checkDiagnostics result `shouldSatisfy` any (\d -> "Unknown namespace" `T.isInfixOf` diagMessage d)
-        Left err -> expectationFailure err
+        Left err -> expectationFailure (T.unpack err)
 
     it "reports ambiguous unqualified ref across opens" $
       let ext =
-            Map.fromList
-              [ ("A", ("a.syl", Map.singleton "Foo" (Proposition A s p), Map.empty)),
-                ("B", ("b.syl", Map.singleton "Foo" (Proposition E s p), Map.empty))
-              ]
+            ExternalContext $
+              Map.fromList
+                [ ("A", NamespaceEntry "a.syl" (Map.singleton "Foo" (Proposition A s p)) Map.empty),
+                  ("B", NamespaceEntry "b.syl" (Map.singleton "Foo" (Proposition E s p)) Map.empty)
+                ]
        in case parseDocument "open A\nopen B\n\nproof Step1\n@Foo\nEvery S is M\n∴ Every S is P\n" of
             Right doc -> do
               let result = checkDocument ext doc
               checkDiagnostics result `shouldSatisfy` any (\d -> "Ambiguous" `T.isInfixOf` diagMessage d)
-            Left err -> expectationFailure err
+            Left err -> expectationFailure (T.unpack err)
 
     it "parses hole conclusion" $
       case parseDocument "proof Test\nEvery M is P\nEvery S is M\n∴ ?\n" of
@@ -606,59 +607,59 @@ main = hspec $ do
           length (docProofs doc) `shouldBe` 1
           let block = locValue (head (docProofs doc))
           locValue (proofConclusion block) `shouldBe` WholePropH
-        Left err -> expectationFailure err
+        Left err -> expectationFailure (T.unpack err)
 
     it "produces hole fills for hole conclusion" $
       case parseDocument "proof Test\nEvery M is P\nEvery S is M\n∴ ?\n" of
         Right doc -> do
-          let result = checkDocument Map.empty doc
+          let result = checkDocument (ExternalContext Map.empty) doc
           checkHoleFills result `shouldSatisfy` (not . null)
           checkHoleFills result `shouldSatisfy` any (\f -> holeFillMood f == Barbara)
-        Left err -> expectationFailure err
+        Left err -> expectationFailure (T.unpack err)
 
     it "emits warning diagnostic for hole" $
       case parseDocument "proof Test\nEvery M is P\nEvery S is M\n∴ ?\n" of
         Right doc -> do
-          let result = checkDocument Map.empty doc
+          let result = checkDocument (ExternalContext Map.empty) doc
           checkDiagnostics result `shouldSatisfy` any (\d -> "solution" `T.isInfixOf` diagMessage d)
           diagSeverity (head (checkDiagnostics result)) `shouldBe` Warning
-        Left err -> expectationFailure err
+        Left err -> expectationFailure (T.unpack err)
 
     it "parses term hole in conclusion" $
       case parseDocument "proof Test\nEvery M is P\nEvery S is M\n∴ Every ? is P\n" of
         Right doc -> do
           let block = locValue (head (docProofs doc))
           locValue (proofConclusion block) `shouldBe` PropH (ConcretePT A) HoleT (ConcreteT p)
-        Left err -> expectationFailure err
+        Left err -> expectationFailure (T.unpack err)
 
     it "parses quantifier hole in conclusion" $
       case parseDocument "proof Test\nEvery M is P\nEvery S is M\n∴ ? S is P\n" of
         Right doc -> do
           let block = locValue (head (docProofs doc))
           locValue (proofConclusion block) `shouldBe` PropH HolePT (ConcreteT s) (ConcreteT p)
-        Left err -> expectationFailure err
+        Left err -> expectationFailure (T.unpack err)
 
     it "parses term hole in premise" $
       case parseDocument "proof Test\nEvery ? is P\nEvery S is M\n∴ ?\n" of
         Right doc -> do
           let block = locValue (head (docProofs doc))
           locValue (head (proofPremises block)) `shouldBe` PremiseHole (PropH (ConcretePT A) HoleT (ConcreteT p))
-        Left err -> expectationFailure err
+        Left err -> expectationFailure (T.unpack err)
 
     it "produces fills for term hole in premise" $
       case parseDocument "proof Test\nEvery ? is P\nEvery S is ?\n∴ Every S is P\n" of
         Right doc -> do
-          let result = checkDocument Map.empty doc
+          let result = checkDocument (ExternalContext Map.empty) doc
           checkHoleFills result `shouldSatisfy` (not . null)
           checkHoleFills result `shouldSatisfy` any (\f -> holeFillMood f == Barbara)
-        Left err -> expectationFailure err
+        Left err -> expectationFailure (T.unpack err)
 
     it "produces fills for whole premise hole" $
       case parseDocument "proof Test\n?\nEvery S is M\n∴ Every S is P\n" of
         Right doc -> do
-          let result = checkDocument Map.empty doc
+          let result = checkDocument (ExternalContext Map.empty) doc
           checkHoleFills result `shouldSatisfy` (not . null)
-        Left err -> expectationFailure err
+        Left err -> expectationFailure (T.unpack err)
 
 -- Helpers
 

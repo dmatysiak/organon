@@ -23,7 +23,7 @@ data Term = Term
   { termName :: Text,
     complemented :: Bool
   }
-  deriving (Eq, Ord, Show)
+  deriving stock (Eq, Ord, Show)
 
 -- | The four categorical proposition types.
 --
@@ -32,7 +32,7 @@ data Term = Term
 --   I = Particular Affirmative ("some S is P")
 --   O = Particular Negative    ("some S is not P")
 data PropType = A | E | I | O
-  deriving (Eq, Ord, Show, Enum, Bounded)
+  deriving stock (Eq, Ord, Show, Enum, Bounded)
 
 -- | A categorical proposition: type, subject, predicate.
 data Proposition = Proposition
@@ -40,7 +40,7 @@ data Proposition = Proposition
     subject :: Term,
     predicate :: Term
   }
-  deriving (Eq, Ord, Show)
+  deriving stock (Eq, Ord, Show)
 
 -- | The four syllogistic figures, determined by the position of the middle term.
 --
@@ -49,7 +49,7 @@ data Proposition = Proposition
 --   Figure III: M-P, M-S ∴ S-P
 --   Figure IV:  P-M, M-S ∴ S-P
 data Figure = FigI | FigII | FigIII | FigIV
-  deriving (Eq, Ord, Show, Enum, Bounded)
+  deriving stock (Eq, Ord, Show, Enum, Bounded)
 
 -- | Named moods using the medieval mnemonic names.
 data Mood
@@ -82,7 +82,7 @@ data Mood
   | Cesaro -- EAO-2 (subaltern of Cesare)
   | Camestrop -- AEO-2 (subaltern of Camestres)
   | Calemos -- AEO-4 (subaltern of Camenes)
-  deriving (Eq, Ord, Show, Enum, Bounded)
+  deriving stock (Eq, Ord, Show, Enum, Bounded)
 
 -- | A syllogism: two premises and a conclusion.
 data Syllogism = Syllogism
@@ -93,7 +93,7 @@ data Syllogism = Syllogism
     -- | Conclusion
     conclusion :: Proposition
   }
-  deriving (Eq, Ord, Show)
+  deriving stock (Eq, Ord, Show)
 
 -- | Which tradition governs validity checking.
 data Tradition
@@ -103,7 +103,7 @@ data Tradition
     Traditional
   | -- | 24 moods, including subaltern moods
     Full
-  deriving (Eq, Ord, Show, Enum, Bounded)
+  deriving stock (Eq, Ord, Show, Enum, Bounded)
 
 -- | A single step in a reduction proof.
 -- The constructors correspond to the significant consonants
@@ -128,7 +128,7 @@ data ProofStep
   | -- | Weaken A→I or E→O, keeping subject and predicate.
     --   Used for subaltern moods.
     Subalternation Proposition Proposition
-  deriving (Eq, Show)
+  deriving stock (Eq, Ord, Show)
 
 -- | Infer the figure from a syllogism by finding the middle term.
 -- The middle term appears in both premises but not in the conclusion.
@@ -149,7 +149,8 @@ figure (Syllogism maj min_ concl) =
 isAffirmative :: PropType -> Bool
 isAffirmative A = True
 isAffirmative I = True
-isAffirmative _ = False
+isAffirmative E = False
+isAffirmative O = False
 
 isNegative :: PropType -> Bool
 isNegative = not . isAffirmative
@@ -157,7 +158,8 @@ isNegative = not . isAffirmative
 isUniversal :: PropType -> Bool
 isUniversal A = True
 isUniversal E = True
-isUniversal _ = False
+isUniversal I = False
+isUniversal O = False
 
 isParticular :: PropType -> Bool
 isParticular = not . isUniversal

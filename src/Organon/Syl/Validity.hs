@@ -5,6 +5,8 @@ module Organon.Syl.Validity
   )
 where
 
+import Data.List (find)
+import Data.Text (Text)
 import Organon.Syl.Tradition
 import Organon.Syl.Types
 
@@ -14,8 +16,8 @@ data ValidationResult
     Valid Mood
   | -- | Valid with the given mood, but only after swapping premises.
     ValidSwapped Mood Syllogism
-  | Invalid String
-  deriving (Eq, Show)
+  | Invalid Text
+  deriving stock (Eq, Show)
 
 -- | Identify the mood of a syllogism, if it matches any known mood
 -- in the given tradition.
@@ -46,12 +48,7 @@ validate tradition syl =
                   Invalid "Not a valid syllogism in the given tradition"
 
 findMood :: Figure -> (PropType, PropType, PropType) -> [Mood] -> Maybe Mood
-findMood fig pt = go
-  where
-    go [] = Nothing
-    go (m : ms) =
-      let spec = moodSpec m
-       in if moodFigure spec == fig
-            && (majorPropType spec, minorPropType spec, conclusionPropType spec) == pt
-            then Just m
-            else go ms
+findMood fig pt = find $ \m ->
+  let spec = moodSpec m
+   in moodFigure spec == fig
+        && (majorPropType spec, minorPropType spec, conclusionPropType spec) == pt

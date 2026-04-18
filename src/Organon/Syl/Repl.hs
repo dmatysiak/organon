@@ -1,38 +1,28 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Organon.Syl.Repl
   ( repl,
-    parseProposition,
-    parseSyllogism,
-    parsePropositionH,
-    parseSyllogismH,
   )
 where
 
 import Control.Monad.IO.Class (liftIO)
-import Data.Char (toLower)
 import Data.IORef
-import Data.List (groupBy, intercalate)
+import Data.List (groupBy)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
-import Data.Void (Void)
-import Organon.Syl.Hole (PropTypeH (..), PropositionH (..), SyllogismH (..), TermH (..), solve)
+import Organon.Syl.Hole (solve)
+import Organon.Syl.Parser (parseSyllogism, parseSyllogismH)
 import Organon.Syl.Pretty
 import Organon.Syl.Proof
 import Organon.Syl.Tradition
 import Organon.Syl.Types
 import Organon.Syl.Validity
 import System.Console.Haskeline
-import Text.Megaparsec
-import Text.Megaparsec.Char
-import qualified Text.Megaparsec.Char.Lexer as L
 
 -- | Run the interactive REPL.
-repl :: String -> IO ()
+repl :: Text -> IO ()
 repl ver = do
   tradRef <- newIORef Traditional
-  TIO.putStrLn $ "organon-syl " <> T.pack ver <> " — a proof assistant for syllogistic logic"
+  TIO.putStrLn $ "organon-syl " <> ver <> " — a proof assistant for syllogistic logic"
   TIO.putStrLn "Type :help for available commands.\n"
   runInputT defaultSettings (loop tradRef)
 
@@ -81,7 +71,7 @@ handleInput tradRef input
       handleSolve trad args
       pure False
   | T.isPrefixOf ":" input = do
-      outputStrLn $ "Unknown command: " ++ T.unpack cmd ++ ". Type :help for available commands."
+      liftIO $ TIO.putStrLn $ "Unknown command: " <> cmd <> ". Type :help for available commands."
       pure False
   | T.any (== '?') input = do
       -- Bare input with holes: auto-route to solve
@@ -96,14 +86,11 @@ handleInput tradRef input
   where
     (cmd, rest) = T.break (== ' ') (T.toLower input)
     args = T.strip rest
-    -- Use original case for args that need it
-    (_cmdOrig, restOrig) = T.break (== ' ') input
-    _argsOrig = T.strip restOrig
 
 printHelp :: InputT IO ()
 printHelp =
-  outputStrLn $
-    unlines
+  liftIO $ TIO.putStrLn $
+    T.unlines
       [ "Commands:",
         "  :validate <syllogism>   Check validity (default for bare input)",
         "  :prove <syllogism>      Validate and show reduction proof",
@@ -120,7 +107,7 @@ printHelp =
         "",
         "Holes (use ? for unknowns):",
         "  ?                       Unknown proposition",
-        "  ? S is P               Unknown quantifier",
+        "  ? S is P                Unknown quantifier",
         "  Every ? is P            Unknown subject term",
         "  Every S is ?            Unknown predicate term",
         "",
@@ -129,7 +116,7 @@ printHelp =
 
 handleTradition :: IORef Tradition -> Text -> InputT IO ()
 handleTradition tradRef args =
-  case map toLower (T.unpack args) of
+  case T.toLower args of
     "strict" -> set Strict
     "traditional" -> set Traditional
     "full" -> set Full
@@ -137,89 +124,87 @@ handleTradition tradRef args =
   where
     set t = do
       liftIO $ writeIORef tradRef t
-      outputStrLn $ "Tradition set to " ++ T.unpack (prettyTradition t)
+      liftIO $ TIO.putStrLn $ "Tradition set to " <> prettyTradition t
 
 handleValidate :: Tradition -> Text -> InputT IO ()
 handleValidate trad input =
   case parseSyllogism input of
-    Left err -> outputStrLn $ "Parse error: " ++ err
+    Left err -> liftIO $ TIO.putStrLn $ "Parse error: " <> err
     Right syl ->
       case validate trad syl of
-        Valid mood -> outputStrLn $ validLine mood ""
-        ValidSwapped mood _ -> outputStrLn $ validLine mood " (premises swapped)"
-        Invalid msg -> outputStrLn $ "Invalid: " ++ msg
+        Valid mood -> liftIO $ TIO.putStrLn $ validLine mood ""
+        ValidSwapped mood _ -> liftIO $ TIO.putStrLn $ validLine mood " (premises swapped)"
+        Invalid msg -> liftIO $ TIO.putStrLn $ "Invalid: " <> msg
 
-validLine :: Mood -> String -> String
+validLine :: Mood -> Text -> Text
 validLine mood suffix =
   let spec = moodSpec mood
       triple =
-        T.unpack $
-          prettyPropType (majorPropType spec)
-            <> prettyPropType (minorPropType spec)
-            <> prettyPropType (conclusionPropType spec)
-      fig = T.unpack $ prettyFigure (moodFigure spec)
+        prettyPropType (majorPropType spec)
+          <> prettyPropType (minorPropType spec)
+          <> prettyPropType (conclusionPropType spec)
+      fig = prettyFigure (moodFigure spec)
    in "Valid: "
-        ++ T.unpack (prettyMood mood)
-        ++ " ("
-        ++ triple
-        ++ "-"
-        ++ fig
-        ++ ")"
-        ++ suffix
+        <> prettyMood mood
+        <> " ("
+        <> triple
+        <> "-"
+        <> fig
+        <> ")"
+        <> suffix
 
 handleProve :: Tradition -> Text -> InputT IO ()
 handleProve trad input =
   case parseSyllogism input of
-    Left err -> outputStrLn $ "Parse error: " ++ err
+    Left err -> liftIO $ TIO.putStrLn $ "Parse error: " <> err
     Right syl ->
       case validate trad syl of
-        Invalid msg -> outputStrLn $ "Invalid: " ++ msg
+        Invalid msg -> liftIO $ TIO.putStrLn $ "Invalid: " <> msg
         Valid mood -> do
           let steps = reduce mood syl
           liftIO $ TIO.putStrLn $ prettyProof mood steps
         ValidSwapped mood swapped -> do
-          outputStrLn "(premises swapped)"
+          liftIO $ TIO.putStrLn "(premises swapped)"
           let steps = reduce mood swapped
           liftIO $ TIO.putStrLn $ prettyProof mood steps
 
 handleMoodInfo :: Tradition -> Text -> InputT IO ()
 handleMoodInfo trad name =
   case lookupMood name of
-    Nothing -> outputStrLn $ "Unknown mood: " ++ T.unpack name
+    Nothing -> liftIO $ TIO.putStrLn $ "Unknown mood: " <> name
     Just mood -> do
       let spec = moodSpec mood
           triple =
-            T.unpack $
-              prettyPropType (majorPropType spec)
-                <> prettyPropType (minorPropType spec)
-                <> prettyPropType (conclusionPropType spec)
-          fig = T.unpack $ prettyFigure (moodFigure spec)
+            prettyPropType (majorPropType spec)
+              <> prettyPropType (minorPropType spec)
+              <> prettyPropType (conclusionPropType spec)
+          fig = prettyFigure (moodFigure spec)
           valid = mood `elem` validMoods trad
           flags =
             concat
               [ if requiresExistentialImport mood then ["existential import"] else [],
                 if isSubaltern mood then ["subaltern"] else []
               ]
-          flagStr = if null flags then "" else " (" ++ intercalate ", " flags ++ ")"
-      outputStrLn $ T.unpack (prettyMood mood) ++ ": " ++ triple ++ "-" ++ fig ++ flagStr
-      outputStrLn $
+          flagStr = if null flags then "" else " (" <> T.intercalate ", " flags <> ")"
+      liftIO $ TIO.putStrLn $ prettyMood mood <> ": " <> triple <> "-" <> fig <> flagStr
+      liftIO $ TIO.putStrLn $
         "Valid in current tradition ("
-          ++ T.unpack (prettyTradition trad)
-          ++ "): "
-          ++ if valid then "yes" else "no"
+          <> prettyTradition trad
+          <> "): "
+          <> if valid then "yes" else "no"
 
 printMoods :: Tradition -> InputT IO ()
 printMoods trad = do
-  outputStrLn $ "Valid moods under " ++ T.unpack (prettyTradition trad) ++ ":"
+  liftIO $ TIO.putStrLn $ "Valid moods under " <> prettyTradition trad <> ":"
   let moods = validMoods trad
       grouped = groupBy (\a b -> moodFigure (moodSpec a) == moodFigure (moodSpec b)) moods
   mapM_ printGroup grouped
   where
     printGroup [] = pure ()
     printGroup ms@(m : _) = do
-      let fig = T.unpack $ prettyFigure $ moodFigure $ moodSpec m
-          names = intercalate ", " $ map (T.unpack . prettyMood) ms
-      outputStrLn $ "  " ++ fig ++ ": " ++ names
+      let fig = prettyFigure $ moodFigure $ moodSpec m
+          names = T.intercalate ", " $ map prettyMood ms
+      liftIO $ TIO.putStrLn $ "  " <> fig <> ": " <> names
 
 lookupMood :: Text -> Maybe Mood
 lookupMood name =
@@ -232,179 +217,8 @@ lookupMood name =
 handleSolve :: Tradition -> Text -> InputT IO ()
 handleSolve trad input =
   case parseSyllogismH input of
-    Left err -> outputStrLn $ "Parse error: " ++ err
+    Left err -> liftIO $ TIO.putStrLn $ "Parse error: " <> err
     Right sylH ->
       case solve trad sylH of
         [] -> outputStrLn "No valid syllogisms match this pattern."
         solutions -> mapM_ (\sol -> liftIO $ TIO.putStrLn $ prettySolution sol) solutions
-
--- Parsers
-
-type Parser = Parsec Void Text
-
--- | Parse a proposition from text.
---
--- Accepted forms:
---   "every S is P"
---   "no S is P"
---   "some S is P"
---   "some S is not P"
---
--- Terms may be prefixed with "non-" to indicate complemented terms.
-parseProposition :: Text -> Either String Proposition
-parseProposition input =
-  case parse (sc *> propositionP <* eof) "" input of
-    Left err -> Left (errorBundlePretty err)
-    Right p -> Right p
-
--- | Parse a syllogism from text: three propositions separated by newlines
--- or semicolons.
---
--- Example:
---   "every M is P; every S is M; every S is P"
-parseSyllogism :: Text -> Either String Syllogism
-parseSyllogism input =
-  case parse (sc *> syllogismP <* eof) "" input of
-    Left err -> Left (errorBundlePretty err)
-    Right s -> Right s
-
--- | Parse a proposition that may contain holes.
-parsePropositionH :: Text -> Either String PropositionH
-parsePropositionH input =
-  case parse (sc *> propositionHP <* eof) "" input of
-    Left err -> Left (errorBundlePretty err)
-    Right p -> Right p
-
--- | Parse a syllogism that may contain holes.
-parseSyllogismH :: Text -> Either String SyllogismH
-parseSyllogismH input =
-  case parse (sc *> syllogismHP <* eof) "" input of
-    Left err -> Left (errorBundlePretty err)
-    Right s -> Right s
-
-sc :: Parser ()
-sc = L.space space1 empty empty
-
-lexeme :: Parser a -> Parser a
-lexeme = L.lexeme sc
-
-symbol :: Text -> Parser Text
-symbol = L.symbol' sc
-
-termP :: Parser Term
-termP = do
-  comp <- option False (True <$ symbol "non-")
-  name <- lexeme (takeWhile1P (Just "term character") isTermChar)
-  pure (Term name comp)
-
-isTermChar :: Char -> Bool
-isTermChar c = c /= ' ' && c /= ';' && c /= '.' && c /= '\n' && c /= '\r' && c /= '?'
-
-propositionP :: Parser Proposition
-propositionP =
-  choice
-    [ propA,
-      propE,
-      propIO
-    ]
-
-propA :: Parser Proposition
-propA = do
-  _ <- symbol "Every"
-  s <- termP
-  _ <- symbol "is"
-  p <- termP
-  pure (Proposition A s p)
-
-propE :: Parser Proposition
-propE = do
-  _ <- symbol "No"
-  s <- termP
-  _ <- symbol "is"
-  p <- termP
-  pure (Proposition E s p)
-
--- "some S is not P" (O) vs "some S is P" (I)
-propIO :: Parser Proposition
-propIO = do
-  _ <- symbol "Some"
-  s <- termP
-  _ <- symbol "is"
-  isNeg <- option False (True <$ symbol "not")
-  p <- termP
-  pure (Proposition (if isNeg then O else I) s p)
-
-syllogismP :: Parser Syllogism
-syllogismP = do
-  maj <- propositionP
-  _ <- separator
-  min_ <- propositionP
-  _ <- separator
-  _ <- optional (symbol "∴" <|> symbol "therefore")
-  concl <- propositionP
-  pure (Syllogism maj min_ concl)
-
-separator :: Parser ()
-separator =
-  ()
-    <$ symbol ";"
-      <|> ()
-    <$ some newline
-    <* sc
-
-termHP :: Parser TermH
-termHP = (HoleT <$ symbol "?") <|> (ConcreteT <$> termP)
-
-propositionHP :: Parser PropositionH
-propositionHP =
-  choice
-    [ try propAH,
-      try propEH,
-      try propIOH,
-      try propQuantHoleH,
-      WholePropH <$ symbol "?"
-    ]
-
-propAH :: Parser PropositionH
-propAH = do
-  _ <- symbol "Every"
-  s <- termHP
-  _ <- symbol "is"
-  p <- termHP
-  pure (PropH (ConcretePT A) s p)
-
-propEH :: Parser PropositionH
-propEH = do
-  _ <- symbol "No"
-  s <- termHP
-  _ <- symbol "is"
-  p <- termHP
-  pure (PropH (ConcretePT E) s p)
-
-propIOH :: Parser PropositionH
-propIOH = do
-  _ <- symbol "Some"
-  s <- termHP
-  _ <- symbol "is"
-  isNeg <- option False (True <$ symbol "not")
-  p <- termHP
-  pure (PropH (ConcretePT (if isNeg then O else I)) s p)
-
-propQuantHoleH :: Parser PropositionH
-propQuantHoleH = do
-  _ <- symbol "?"
-  s <- termHP
-  _ <- symbol "is"
-  _ <- optional (symbol "not")
-  p <- termHP
-  pure (PropH HolePT s p)
-
-syllogismHP :: Parser SyllogismH
-syllogismHP = do
-  maj <- propositionHP
-  _ <- separator
-  min_ <- propositionHP
-  _ <- separator
-  _ <- optional (symbol "∴" <|> symbol "therefore")
-  concl <- propositionHP
-  pure (SylH maj min_ concl)

@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Organon.Syl.Check
   ( -- * Types
     Diagnostic (..),
@@ -11,7 +9,8 @@ module Organon.Syl.Check
     SwapAction (..),
     HoleFill (..),
     HoleFillEdit (..),
-    ExternalContext,
+    ExternalContext (..),
+    NamespaceEntry (..),
 
     -- * Checking
     checkDocument,
@@ -31,16 +30,16 @@ import Organon.Syl.Validity
 
 -- | Severity of a diagnostic.
 data Severity = Error | Warning
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 -- | A diagnostic message attached to a source span.
 data Diagnostic = Diagnostic
-  { diagStart :: !SrcPos,
-    diagEnd :: !SrcPos,
-    diagSeverity :: !Severity,
+  { diagStart :: SrcPos,
+    diagEnd :: SrcPos,
+    diagSeverity :: Severity,
     diagMessage :: Text
   }
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 -- | A successfully checked proof.
 data CheckedProof = CheckedProof
@@ -50,43 +49,43 @@ data CheckedProof = CheckedProof
     checkedSwapped :: Bool,
     checkedSteps :: [ProofStep]
   }
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 -- | A source span with hover text.
 data HoverItem = HoverItem
-  { hoverStart :: !SrcPos,
-    hoverEnd :: !SrcPos,
+  { hoverStart :: SrcPos,
+    hoverEnd :: SrcPos,
     hoverText :: Text
   }
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 -- | Maps an @reference span to the definition span of the proof it refers to.
 -- If defTargetFile is Nothing, the definition is in the same file.
 data DefinitionItem = DefinitionItem
-  { defRefStart :: !SrcPos,
-    defRefEnd :: !SrcPos,
+  { defRefStart :: SrcPos,
+    defRefEnd :: SrcPos,
     defTargetFile :: Maybe FilePath,
-    defTargetStart :: !SrcPos,
-    defTargetEnd :: !SrcPos
+    defTargetStart :: SrcPos,
+    defTargetEnd :: SrcPos
   }
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 -- | A code action to swap premises into canonical order.
 data SwapAction = SwapAction
-  { swapPrem1Start :: !SrcPos,
-    swapPrem1End :: !SrcPos,
-    swapPrem2Start :: !SrcPos,
-    swapPrem2End :: !SrcPos
+  { swapPrem1Start :: SrcPos,
+    swapPrem1End :: SrcPos,
+    swapPrem2Start :: SrcPos,
+    swapPrem2End :: SrcPos
   }
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 -- | A single text edit within a hole fill.
 data HoleFillEdit = HoleFillEdit
-  { fillEditStart :: !SrcPos,
-    fillEditEnd :: !SrcPos,
+  { fillEditStart :: SrcPos,
+    fillEditEnd :: SrcPos,
     fillEditText :: Text
   }
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 -- | A code action to fill holes with a solved proposition.
 data HoleFill = HoleFill
@@ -94,11 +93,20 @@ data HoleFill = HoleFill
     holeFillEdits :: [HoleFillEdit],
     holeFillLabel :: Text
   }
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
--- | External context: namespace name → (file path, proof name → conclusion, proof name → location).
-type ExternalContext =
-  Map Text (FilePath, Map Text Proposition, Map Text (SrcPos, SrcPos))
+-- | Per-namespace entry in the external context.
+data NamespaceEntry = NamespaceEntry
+  { nsFilePath    :: FilePath
+  , nsConclusions :: Map Text Proposition
+  , nsLocations   :: Map Text (SrcPos, SrcPos)
+  }
+  deriving stock (Show)
+
+-- | External context: namespace name → namespace entry.
+newtype ExternalContext = ExternalContext
+  { unExternalContext :: Map Text NamespaceEntry }
+  deriving stock (Show)
 
 -- | Result of checking an entire document.
 data CheckResult = CheckResult
@@ -109,7 +117,21 @@ data CheckResult = CheckResult
     checkSwaps :: [SwapAction],
     checkHoleFills :: [HoleFill]
   }
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
+
+-- | Accumulator for the document-checking loop.
+data CheckAcc = CheckAcc
+  { accDiags  :: [Diagnostic]
+  , accProofs :: [CheckedProof]
+  , accHovers :: [HoverItem]
+  , accDefs   :: [DefinitionItem]
+  , accSwaps  :: [SwapAction]
+  , accFills  :: [HoleFill]
+  }
+  deriving stock (Show)
+
+emptyAcc :: CheckAcc
+emptyAcc = CheckAcc [] [] [] [] [] []
 
 -- | Check a parsed document: resolve references, validate syllogisms,
 -- and collect diagnostics.
@@ -125,14 +147,19 @@ checkDocument ext doc =
             Error
             ("Unknown namespace: " <> locValue lo)
           | lo <- docOpens doc,
-            not (Map.member (locValue lo) ext)
+            not (Map.member (locValue lo) (unExternalContext ext))
         ]
-      (diags, proofs, hovers, defs, swaps, fills) =
-        go tradition opens Map.empty Map.empty [] [] [] [] [] [] (docProofs doc)
-   in CheckResult (openDiags ++ diags) proofs hovers defs swaps fills
+      acc = go tradition opens Map.empty Map.empty emptyAcc (docProofs doc)
+   in CheckResult
+        (openDiags ++ reverse (accDiags acc))
+        (reverse (accProofs acc))
+        (reverse (accHovers acc))
+        (reverse (accDefs acc))
+        (reverse (accSwaps acc))
+        (reverse (accFills acc))
   where
-    go _ _ _ _ diags proofs hovers defs swaps fills [] = (reverse diags, reverse proofs, reverse hovers, reverse defs, reverse swaps, reverse fills)
-    go trad opens ctx locs diags proofs hovers defs swaps fills (lp : rest) =
+    go _ _ _ _ acc [] = acc
+    go trad opens ctx locs acc (lp : rest) =
       let block = locValue lp
           name = locValue (proofName block)
           nameStart = locStart (proofName block)
@@ -142,7 +169,13 @@ checkDocument ext doc =
           refDefs = mkRefDefs ext opens locs (proofPremises block)
        in case checkProofBlock trad ext opens ctx block of
             Left (newDiags, newFills) ->
-              go trad opens ctx locs (newDiags ++ diags) proofs (refHovers ++ hovers) (refDefs ++ defs) swaps (newFills ++ fills) rest
+              go trad opens ctx locs
+                acc { accDiags  = newDiags ++ accDiags acc
+                    , accHovers = refHovers ++ accHovers acc
+                    , accDefs   = refDefs ++ accDefs acc
+                    , accFills  = newFills ++ accFills acc
+                    }
+                rest
             Right checked ->
               let concl = conclusion (checkedSyllogism checked)
                   ctx' = Map.insert name concl ctx
@@ -157,8 +190,16 @@ checkDocument ext doc =
                               nameEnd
                               Error
                               ("Duplicate proof name: " <> name)
-                       in go trad opens ctx locs (d : diags) proofs hovers defs swaps fills rest
-                    else go trad opens ctx' locs' diags (checked : proofs) (refHovers ++ (proofHover : hovers)) (refDefs ++ defs) (newSwaps ++ swaps) fills rest
+                       in go trad opens ctx locs
+                            acc { accDiags = d : accDiags acc }
+                            rest
+                    else go trad opens ctx' locs'
+                           acc { accProofs = checked : accProofs acc
+                               , accHovers = refHovers ++ (proofHover : accHovers acc)
+                               , accDefs   = refDefs ++ accDefs acc
+                               , accSwaps  = newSwaps ++ accSwaps acc
+                               }
+                           rest
 
 -- | Check a single proof block against the accumulated context.
 checkProofBlock ::
@@ -189,7 +230,7 @@ checkProofBlock trad ext opens ctx block =
                         Invalid msg ->
                           let s = locStart (proofConclusion block)
                               e = locEnd (proofConclusion block)
-                           in Left ([Diagnostic s e Error (T.pack msg)], [])
+                           in Left ([Diagnostic s e Error msg], [])
                 _ ->
                   -- At least one hole: run solver.
                   let sylH = SylH p1h p2h conclH
@@ -227,33 +268,25 @@ mkSolutionFill ::
   Located PropositionH ->
   Solution ->
   HoleFill
-mkSolutionFill premLocs p1h p2h conclH conclLoc sol =
+mkSolutionFill [loc1, loc2] p1h p2h conclH conclLoc sol =
   let edits =
         concat
-          [ mkPropEdits (premLocs !! 0) p1h (solMajor sol),
-            mkPropEdits (premLocs !! 1) p2h (solMinor sol),
-            mkPropEditsConc conclLoc conclH (solConclusion sol)
+          [ mkHoleEdits (locStart loc1) (locEnd loc1) p1h (solMajor sol),
+            mkHoleEdits (locStart loc2) (locEnd loc2) p2h (solMinor sol),
+            mkHoleEdits (locStart conclLoc) (locEnd conclLoc) conclH (solConclusion sol)
           ]
       label = case solutionPropToConc (solConclusion sol) of
         Just concl -> prettyProposition concl
         Nothing -> prettyPropositionH conclH
    in HoleFill (solutionMood sol) edits label
+mkSolutionFill _ _ _ _ _ _ = HoleFill Barbara [] ""
 
--- | Create fill edits for a premise position if it has holes.
-mkPropEdits :: Located Premise -> PropositionH -> SolutionProp -> [HoleFillEdit]
-mkPropEdits lp propH solProp
+-- | Create fill edits for a span if the proposition has holes.
+mkHoleEdits :: SrcPos -> SrcPos -> PropositionH -> SolutionProp -> [HoleFillEdit]
+mkHoleEdits s e propH solProp
   | hasHoles propH =
       case solutionPropToConc solProp of
-        Just concl -> [HoleFillEdit (locStart lp) (locEnd lp) (prettyProposition concl)]
-        Nothing -> []
-  | otherwise = []
-
--- | Create fill edits for the conclusion position if it has holes.
-mkPropEditsConc :: Located PropositionH -> PropositionH -> SolutionProp -> [HoleFillEdit]
-mkPropEditsConc loc propH solProp
-  | hasHoles propH =
-      case solutionPropToConc solProp of
-        Just concl -> [HoleFillEdit (locStart loc) (locEnd loc) (prettyProposition concl)]
+        Just concl -> [HoleFillEdit s e (prettyProposition concl)]
         Nothing -> []
   | otherwise = []
 
@@ -271,12 +304,13 @@ collectHoleSpans ::
   PropositionH ->
   Located PropositionH ->
   [(SrcPos, SrcPos)]
-collectHoleSpans premLocs p1h p2h conclH conclLoc =
+collectHoleSpans [loc1, loc2] p1h p2h conclH conclLoc =
   concat
-    [ [(locStart (premLocs !! 0), locEnd (premLocs !! 0)) | hasHoles p1h],
-      [(locStart (premLocs !! 1), locEnd (premLocs !! 1)) | hasHoles p2h],
+    [ [(locStart loc1, locEnd loc1) | hasHoles p1h],
+      [(locStart loc2, locEnd loc2) | hasHoles p2h],
       [(locStart conclLoc, locEnd conclLoc) | hasHoles conclH]
     ]
+collectHoleSpans _ _ _ _ _ = []
 
 -- | Convert a concrete proposition to a hole-enabled proposition.
 propToH :: Proposition -> PropositionH
@@ -310,8 +344,8 @@ resolvePremises ext opens ctx = go []
               let hits =
                     [ prop
                       | ns <- opens,
-                        Just (_, props, _) <- [Map.lookup ns ext],
-                        Just prop <- [Map.lookup name props]
+                        Just entry <- [Map.lookup ns (unExternalContext ext)],
+                        Just prop <- [Map.lookup name (nsConclusions entry)]
                     ]
                in case hits of
                     [prop] -> go (propToH prop : acc) rest
@@ -335,7 +369,7 @@ resolvePremises ext opens ctx = go []
                             ("Unknown reference: @" <> name)
                         ]
         PremiseRef (Just ns) name ->
-          case Map.lookup ns ext of
+          case Map.lookup ns (unExternalContext ext) of
             Nothing ->
               Left
                 [ Diagnostic
@@ -344,8 +378,8 @@ resolvePremises ext opens ctx = go []
                     Error
                     ("Unknown namespace: " <> ns)
                 ]
-            Just (_, props, _) ->
-              case Map.lookup name props of
+            Just entry ->
+              case Map.lookup name (nsConclusions entry) of
                 Just prop -> go (propToH prop : acc) rest
                 Nothing ->
                   Left
@@ -391,19 +425,19 @@ mkRefDefs ext opens locs = concatMap go
           Just (ts, te) -> [DefinitionItem (locStart lp) (locEnd lp) Nothing ts te]
           Nothing ->
             let hits =
-                  [ (fp, ts, te)
+                  [ (nsFilePath entry, ts, te)
                     | ns <- opens,
-                      Just (fp, _, elocs) <- [Map.lookup ns ext],
-                      Just (ts, te) <- [Map.lookup name elocs]
+                      Just entry <- [Map.lookup ns (unExternalContext ext)],
+                      Just (ts, te) <- [Map.lookup name (nsLocations entry)]
                   ]
              in case hits of
                   [(fp, ts, te)] -> [DefinitionItem (locStart lp) (locEnd lp) (Just fp) ts te]
                   _ -> []
       PremiseRef (Just ns) name ->
-        case Map.lookup ns ext of
-          Just (fp, _, elocs) ->
-            case Map.lookup name elocs of
-              Just (ts, te) -> [DefinitionItem (locStart lp) (locEnd lp) (Just fp) ts te]
+        case Map.lookup ns (unExternalContext ext) of
+          Just entry ->
+            case Map.lookup name (nsLocations entry) of
+              Just (ts, te) -> [DefinitionItem (locStart lp) (locEnd lp) (Just (nsFilePath entry)) ts te]
               Nothing -> []
           Nothing -> []
       PremiseProp _ -> []
@@ -418,15 +452,15 @@ resolveRef ext opens ctx Nothing name =
       let hits =
             [ prop
               | ns <- opens,
-                Just (_, props, _) <- [Map.lookup ns ext],
-                Just prop <- [Map.lookup name props]
+                Just entry <- [Map.lookup ns (unExternalContext ext)],
+                Just prop <- [Map.lookup name (nsConclusions entry)]
             ]
        in case hits of
             [prop] -> Just prop
             _ -> Nothing
 resolveRef ext _ _ (Just ns) name =
-  case Map.lookup ns ext of
-    Just (_, props, _) -> Map.lookup name props
+  case Map.lookup ns (unExternalContext ext) of
+    Just entry -> Map.lookup name (nsConclusions entry)
     Nothing -> Nothing
 
 -- | Emit a swap action if the proof required premise swapping.

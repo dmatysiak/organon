@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Organon.Syl.Document
   ( -- * Types
     Document (..),
@@ -14,26 +12,26 @@ module Organon.Syl.Document
   )
 where
 
-import Control.Monad (void)
 import Data.Text (Text)
-import Data.Void (Void)
+import qualified Data.Text as T
 import Organon.Syl.Hole (PropTypeH (..), PropositionH (..), TermH (..))
+import Organon.Syl.Parser (Parser, isNameChar, lexeme, lineComment, propositionHP, symbol)
 import Organon.Syl.Types
 import Text.Megaparsec
 import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 
 -- | Source position (1-indexed line and column).
-data SrcPos = SrcPos {posLine :: !Int, posCol :: !Int}
-  deriving (Eq, Show)
+data SrcPos = SrcPos {posLine :: Int, posCol :: Int}
+  deriving stock (Eq, Show)
 
 -- | A value annotated with a source span.
 data Located a = Located
-  { locStart :: !SrcPos,
-    locEnd :: !SrcPos,
+  { locStart :: SrcPos,
+    locEnd :: SrcPos,
     locValue :: a
   }
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 -- | A premise in a proof block: either a proposition, a reference, or
 -- a proposition with holes.
@@ -45,7 +43,7 @@ data Premise
     PremiseRef (Maybe Text) Text
   | -- | A proposition containing holes (term, quantifier, or whole).
     PremiseHole PropositionH
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 -- | A proof block.
 data ProofBlock = ProofBlock
@@ -53,7 +51,7 @@ data ProofBlock = ProofBlock
     proofPremises :: [Located Premise],
     proofConclusion :: Located PropositionH
   }
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 -- | A document: an optional tradition directive followed by proof blocks.
 data Document = Document
@@ -61,36 +59,18 @@ data Document = Document
     docOpens :: [Located Text],
     docProofs :: [Located ProofBlock]
   }
-  deriving (Eq, Show)
-
--- Megaparsec setup
-
-type Parser = Parsec Void Text
+  deriving stock (Eq, Show)
 
 -- | Parse a .syl document.
-parseDocument :: Text -> Either String Document
+parseDocument :: Text -> Either Text Document
 parseDocument input =
   case parse (scn *> documentP <* eof) "" input of
-    Left err -> Left (errorBundlePretty err)
+    Left err -> Left (T.pack (errorBundlePretty err))
     Right d -> Right d
-
--- Whitespace: spaces, tabs, and line comments (--).
--- Newlines are significant in some contexts, so we handle them manually.
-sc :: Parser ()
-sc = L.space (void $ some (char ' ' <|> char '\t')) lineComment empty
-
-lineComment :: Parser ()
-lineComment = L.skipLineComment "--"
 
 -- Whitespace including newlines (for between top-level blocks).
 scn :: Parser ()
 scn = L.space space1 lineComment empty
-
-lexeme :: Parser a -> Parser a
-lexeme = L.lexeme sc
-
-symbol :: Text -> Parser Text
-symbol = L.symbol' sc
 
 -- Position helpers
 
@@ -105,25 +85,6 @@ located p = do
   v <- p
   e <- getPos
   pure (Located s e v)
-
--- Term and proposition parsers (reused from Parser.hs logic)
-
-termP :: Parser Term
-termP = do
-  comp <- option False (True <$ symbol "non-")
-  name <- lexeme (takeWhile1P (Just "term character") isTermChar)
-  pure (Term name comp)
-
-isTermChar :: Char -> Bool
-isTermChar c =
-  c /= ' '
-    && c /= '\t'
-    && c /= ';'
-    && c /= '.'
-    && c /= '\n'
-    && c /= '\r'
-    && c /= '?'
-    && c /= '@'
 
 -- Premise: either @Reference, a proposition with holes, or a concrete proposition.
 
@@ -148,14 +109,7 @@ refP = do
       pure (PremiseRef (Just first) name)
     Nothing -> pure (PremiseRef Nothing first)
 
-isNameChar :: Char -> Bool
-isNameChar c =
-  c /= ' '
-    && c /= '\t'
-    && c /= '\n'
-    && c /= '\r'
-    && c /= ';'
-    && c /= '.'
+
 
 -- Proof block
 
@@ -178,55 +132,6 @@ conclusionP = do
 fromConcreteH :: PropositionH -> Maybe Proposition
 fromConcreteH (PropH (ConcretePT pt) (ConcreteT s) (ConcreteT p)) = Just (Proposition pt s p)
 fromConcreteH _ = Nothing
-
--- Hole-aware parsers
-
-termHP :: Parser TermH
-termHP = (HoleT <$ symbol "?") <|> (ConcreteT <$> termP)
-
-propositionHP :: Parser PropositionH
-propositionHP =
-  choice
-    [ try propAH,
-      try propEH,
-      try propIOH,
-      try propQuantHoleH,
-      WholePropH <$ symbol "?"
-    ]
-
-propAH :: Parser PropositionH
-propAH = do
-  _ <- symbol "Every"
-  s <- termHP
-  _ <- symbol "is"
-  p <- termHP
-  pure (PropH (ConcretePT A) s p)
-
-propEH :: Parser PropositionH
-propEH = do
-  _ <- symbol "No"
-  s <- termHP
-  _ <- symbol "is"
-  p <- termHP
-  pure (PropH (ConcretePT E) s p)
-
-propIOH :: Parser PropositionH
-propIOH = do
-  _ <- symbol "Some"
-  s <- termHP
-  _ <- symbol "is"
-  isNeg <- option False (True <$ symbol "not")
-  p <- termHP
-  pure (PropH (ConcretePT (if isNeg then O else I)) s p)
-
-propQuantHoleH :: Parser PropositionH
-propQuantHoleH = do
-  _ <- symbol "?"
-  s <- termHP
-  _ <- symbol "is"
-  _ <- optional (symbol "not")
-  p <- termHP
-  pure (PropH HolePT s p)
 
 -- Tradition directive
 
