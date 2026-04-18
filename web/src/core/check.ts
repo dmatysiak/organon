@@ -11,13 +11,15 @@ import type {
 } from "./document";
 import { fromConcreteH } from "./document";
 import {
+  figureLabels,
   prettyFigure,
   prettyMood,
   prettyProof,
   prettyProposition,
-  prettyPropositionH,
+  prettySolutionProp,
 } from "./pretty";
 import { reduce } from "./proof";
+import { moodSpec } from "./tradition";
 import {
   figure,
   Mood,
@@ -114,17 +116,6 @@ function propToH(p: Proposition): PropositionH {
     subject: { tag: "ConcreteT", term: p.subject },
     predicate: { tag: "ConcreteT", term: p.predicate },
   };
-}
-
-function solutionPropToConc(sp: SolutionProp): Proposition | null {
-  if (sp.solSubject !== null && sp.solPredicate !== null) {
-    return {
-      propType: sp.solPropType,
-      subject: sp.solSubject,
-      predicate: sp.solPredicate,
-    };
-  }
-  return null;
 }
 
 function hasHoles(ph: PropositionH): boolean {
@@ -382,15 +373,14 @@ function mkHoleEdits(
   e: SrcPos,
   propH: PropositionH,
   solProp: SolutionProp,
+  labels: [string, string],
 ): HoleFillEdit[] {
   if (!hasHoles(propH)) return [];
-  const concl = solutionPropToConc(solProp);
-  if (concl === null) return [];
   return [
     {
       fillEditStart: s,
       fillEditEnd: e,
-      fillEditText: prettyProposition(concl),
+      fillEditText: prettySolutionProp(solProp, labels),
     },
   ];
 }
@@ -406,20 +396,21 @@ function mkSolutionFill(
   if (premLocs.length !== 2) {
     return { holeFillMood: Mood.Barbara, holeFillEdits: [], holeFillLabel: "" };
   }
+  const spec = moodSpec(sol.solutionMood);
+  const [majLabels, minLabels, conLabels] = figureLabels(spec.moodFigure);
   const [loc1, loc2] = premLocs;
   const edits = [
-    ...mkHoleEdits(loc1.locStart, loc1.locEnd, p1h, sol.solMajor),
-    ...mkHoleEdits(loc2.locStart, loc2.locEnd, p2h, sol.solMinor),
+    ...mkHoleEdits(loc1.locStart, loc1.locEnd, p1h, sol.solMajor, majLabels),
+    ...mkHoleEdits(loc2.locStart, loc2.locEnd, p2h, sol.solMinor, minLabels),
     ...mkHoleEdits(
       conclLoc.locStart,
       conclLoc.locEnd,
       conclH,
       sol.solConclusion,
+      conLabels,
     ),
   ];
-  const conc = solutionPropToConc(sol.solConclusion);
-  const label =
-    conc !== null ? prettyProposition(conc) : prettyPropositionH(conclH);
+  const label = prettySolutionProp(sol.solConclusion, conLabels);
   return {
     holeFillMood: sol.solutionMood,
     holeFillEdits: edits,

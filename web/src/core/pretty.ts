@@ -138,7 +138,7 @@ export function prettySolutionProp(
   }
 }
 
-function figureLabels(
+export function figureLabels(
   fig: Figure,
 ): [[string, string], [string, string], [string, string]] {
   switch (fig) {

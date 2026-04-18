@@ -12,6 +12,7 @@ module Organon.Syl.Pretty
     prettyPropositionH,
     prettySolution,
     prettySolutionProp,
+    figureLabels,
     showText,
   )
 where

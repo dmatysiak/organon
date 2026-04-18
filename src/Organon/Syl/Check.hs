@@ -20,11 +20,11 @@ where
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Text (Text)
-import qualified Data.Text as T
 import Organon.Syl.Document
 import Organon.Syl.Hole (PropTypeH (..), PropositionH (..), Solution (..), SolutionProp (..), SyllogismH (..), TermH (..), solve)
-import Organon.Syl.Pretty (prettyFigure, prettyMood, prettyProof, prettyProposition, prettyPropositionH, showText)
+import Organon.Syl.Pretty (figureLabels, prettyFigure, prettyMood, prettyProof, prettyProposition, prettySolutionProp, showText)
 import Organon.Syl.Proof (reduce)
+import Organon.Syl.Tradition (MoodSpec (..), moodSpec)
 import Organon.Syl.Types
 import Organon.Syl.Validity
 
@@ -269,25 +269,22 @@ mkSolutionFill ::
   Solution ->
   HoleFill
 mkSolutionFill [loc1, loc2] p1h p2h conclH conclLoc sol =
-  let edits =
+  let spec = moodSpec (solutionMood sol)
+      (majLabels, minLabels, conLabels) = figureLabels (moodFigure spec)
+      edits =
         concat
-          [ mkHoleEdits (locStart loc1) (locEnd loc1) p1h (solMajor sol),
-            mkHoleEdits (locStart loc2) (locEnd loc2) p2h (solMinor sol),
-            mkHoleEdits (locStart conclLoc) (locEnd conclLoc) conclH (solConclusion sol)
+          [ mkHoleEdits (locStart loc1) (locEnd loc1) p1h (solMajor sol) majLabels,
+            mkHoleEdits (locStart loc2) (locEnd loc2) p2h (solMinor sol) minLabels,
+            mkHoleEdits (locStart conclLoc) (locEnd conclLoc) conclH (solConclusion sol) conLabels
           ]
-      label = case solutionPropToConc (solConclusion sol) of
-        Just concl -> prettyProposition concl
-        Nothing -> prettyPropositionH conclH
+      label = prettySolutionProp (solConclusion sol) conLabels
    in HoleFill (solutionMood sol) edits label
 mkSolutionFill _ _ _ _ _ _ = HoleFill Barbara [] ""
 
 -- | Create fill edits for a span if the proposition has holes.
-mkHoleEdits :: SrcPos -> SrcPos -> PropositionH -> SolutionProp -> [HoleFillEdit]
-mkHoleEdits s e propH solProp
-  | hasHoles propH =
-      case solutionPropToConc solProp of
-        Just concl -> [HoleFillEdit s e (prettyProposition concl)]
-        Nothing -> []
+mkHoleEdits :: SrcPos -> SrcPos -> PropositionH -> SolutionProp -> (Text, Text) -> [HoleFillEdit]
+mkHoleEdits s e propH solProp labels
+  | hasHoles propH = [HoleFillEdit s e (prettySolutionProp solProp labels)]
   | otherwise = []
 
 -- | Check whether a PropositionH contains any holes.
@@ -315,11 +312,6 @@ collectHoleSpans _ _ _ _ _ = []
 -- | Convert a concrete proposition to a hole-enabled proposition.
 propToH :: Proposition -> PropositionH
 propToH (Proposition pt s p) = PropH (ConcretePT pt) (ConcreteT s) (ConcreteT p)
-
--- | Convert a SolutionProp to a concrete Proposition if all terms are known.
-solutionPropToConc :: SolutionProp -> Maybe Proposition
-solutionPropToConc (SolutionProp pt (Just s) (Just p)) = Just (Proposition pt s p)
-solutionPropToConc _ = Nothing
 
 -- | Resolve premise references and holes against the local and external context.
 -- Returns PropositionH for each premise: concrete ones become fully-specified PropH,
