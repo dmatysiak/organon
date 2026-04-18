@@ -4,6 +4,7 @@ module Organon.Syl.Pretty
     prettyProposition,
     prettySyllogism,
     prettyFigure,
+    prettyFigureForm,
     prettyMood,
     prettyProofStep,
     prettyProof,
@@ -67,6 +68,12 @@ prettyFigure FigI = "1"
 prettyFigure FigII = "2"
 prettyFigure FigIII = "3"
 prettyFigure FigIV = "4"
+
+-- | Render the term arrangement of a figure (e.g. "M-P, S-M ∴ S-P").
+prettyFigureForm :: Figure -> Text
+prettyFigureForm fig =
+  let ((ms, mp), (ns_, np), (cs, cp)) = figureLabels fig
+   in ms <> "-" <> mp <> ", " <> ns_ <> "-" <> np <> " ∴ " <> cs <> "-" <> cp
 
 -- | Render a mood name.
 prettyMood :: Mood -> Text

@@ -54,6 +54,11 @@ export function prettyFigure(fig: Figure): string {
   }
 }
 
+export function prettyFigureForm(fig: Figure): string {
+  const [[ms, mp], [ns, np], [cs, cp]] = figureLabels(fig);
+  return `${ms}-${mp}, ${ns}-${np} ∴ ${cs}-${cp}`;
+}
+
 export function prettyMood(mood: Mood): string {
   return mood;
 }

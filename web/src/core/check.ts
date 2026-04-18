@@ -14,9 +14,11 @@ import { fromConcreteH } from "./document";
 import {
   figureLabels,
   prettyFigure,
+  prettyFigureForm,
   prettyMood,
   prettyProof,
   prettyProposition,
+  prettyPropositionH,
   prettyRefModifier,
   prettySolutionProp,
 } from "./pretty";
@@ -339,8 +341,9 @@ function resolveRef(
 function mkProofHover(s: SrcPos, e: SrcPos, cp: CheckedProof): HoverItem {
   const fig = figure(cp.checkedSyllogism);
   const figText = fig !== null ? `Figure ${prettyFigure(fig)}, ` : "";
+  const figForm = fig !== null ? `\n${prettyFigureForm(fig)}` : "";
   const swapNote = cp.checkedSwapped ? " (premises swapped)" : "";
-  const header = `${figText}${prettyMood(cp.checkedMood)}${swapNote}`;
+  const header = `${figText}${prettyMood(cp.checkedMood)}${swapNote}${figForm}`;
   const body = prettyProof(cp.checkedMood, cp.checkedSteps);
   return { hoverStart: s, hoverEnd: e, hoverText: `${header}\n\n${body}` };
 }
@@ -357,10 +360,18 @@ function mkRefHovers(
     if (prem.tag === "PremiseRef") {
       const prop = resolveRef(ext, opens, ctx, prem.namespace, prem.name);
       if (prop) {
+        const base = prettyProposition(prop);
+        let text = base;
+        if (prem.modifier !== null) {
+          const result = applyRefModifier(lp, prem.modifier, prop);
+          if ("ok" in result) {
+            text = `${base}\n→ ${prettyPropositionH(result.ok)}`;
+          }
+        }
         items.push({
           hoverStart: lp.locStart,
           hoverEnd: lp.locEnd,
-          hoverText: prettyProposition(prop),
+          hoverText: text,
         });
       }
     }

@@ -23,7 +23,7 @@ import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import Organon.Syl.Document
 import Organon.Syl.Hole (PropTypeH (..), PropositionH (..), Solution (..), SolutionProp (..), SyllogismH (..), TermH (..), solve)
-import Organon.Syl.Pretty (figureLabels, prettyFigure, prettyMood, prettyProof, prettyProposition, prettyRefModifier, prettySolutionProp, showText)
+import Organon.Syl.Pretty (figureLabels, prettyFigure, prettyFigureForm, prettyMood, prettyProof, prettyProposition, prettyPropositionH, prettyRefModifier, prettySolutionProp, showText)
 import Organon.Syl.Proof (reduce, reducedSyllogism)
 import Organon.Syl.Tradition (MoodSpec (..), moodSpec)
 import Organon.Syl.Types
@@ -445,8 +445,9 @@ mkProofHover s e cp =
       syl = checkedSyllogism cp
       fig = figure syl
       figText = maybe "" (\f -> "Figure " <> prettyFigure f <> ", ") fig
+      figForm = maybe "" (\f -> "\n" <> prettyFigureForm f) fig
       swapNote = if checkedSwapped cp then " (premises swapped)" else ""
-      header = figText <> prettyMood mood <> swapNote
+      header = figText <> prettyMood mood <> swapNote <> figForm
       body = prettyProof mood (checkedSteps cp)
    in HoverItem s e (header <> "\n\n" <> body)
 
@@ -455,9 +456,16 @@ mkRefHovers :: ExternalContext -> [Text] -> Map Text Proposition -> [Located Pre
 mkRefHovers ext opens ctx = concatMap go
   where
     go lp = case locValue lp of
-      PremiseRef mns name _ ->
+      PremiseRef mns name mmod ->
         case resolveRef ext opens ctx mns name of
-          Just prop -> [HoverItem (locStart lp) (locEnd lp) (prettyProposition prop)]
+          Just prop ->
+            let base = prettyProposition prop
+                converted = case mmod of
+                  Nothing -> base
+                  Just _ -> case applyRefModifier lp mmod prop of
+                    Right ph -> base <> "\n→ " <> prettyPropositionH ph
+                    Left _ -> base
+             in [HoverItem (locStart lp) (locEnd lp) converted]
           Nothing -> []
       PremiseProp _ -> []
       PremiseHole _ -> []
