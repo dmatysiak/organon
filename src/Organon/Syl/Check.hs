@@ -23,7 +23,7 @@ import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import Organon.Syl.Document
 import Organon.Syl.Hole (PropTypeH (..), PropositionH (..), Solution (..), SolutionProp (..), SyllogismH (..), TermH (..), solve)
-import Organon.Syl.Pretty (figureLabels, prettyFigure, prettyFigureForm, prettyMood, prettyProof, prettyProposition, prettyPropositionH, prettyRefModifier, prettySolutionProp, showText)
+import Organon.Syl.Pretty (figureLabels, prettyFigure, prettyMoodForm, prettyMood, prettyProof, prettyProposition, prettyPropositionH, prettyRefModifier, prettySolutionProp, showText)
 import Organon.Syl.Proof (reduce, reducedSyllogism)
 import Organon.Syl.Tradition (MoodSpec (..), moodSpec)
 import Organon.Syl.Types
@@ -444,10 +444,12 @@ mkProofHover s e cp =
   let mood = checkedMood cp
       syl = checkedSyllogism cp
       fig = figure syl
+      spec = moodSpec mood
+      triple = showText (majorPropType spec) <> showText (minorPropType spec) <> showText (conclusionPropType spec)
       figText = maybe "" (\f -> "Figure " <> prettyFigure f <> ", ") fig
-      figForm = maybe "" (\f -> "\n" <> prettyFigureForm f) fig
+      figNum = maybe "" (\f -> "-" <> prettyFigure f) fig
       swapNote = if checkedSwapped cp then " (premises swapped)" else ""
-      header = figText <> prettyMood mood <> swapNote <> figForm
+      header = figText <> prettyMood mood <> " (" <> triple <> figNum <> ")" <> swapNote <> "\n" <> prettyMoodForm mood
       body = prettyProof mood (checkedSteps cp)
    in HoverItem s e (header <> "\n\n" <> body)
 

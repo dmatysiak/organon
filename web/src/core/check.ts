@@ -14,7 +14,7 @@ import { fromConcreteH } from "./document";
 import {
   figureLabels,
   prettyFigure,
-  prettyFigureForm,
+  prettyMoodForm,
   prettyMood,
   prettyProof,
   prettyProposition,
@@ -340,10 +340,12 @@ function resolveRef(
 
 function mkProofHover(s: SrcPos, e: SrcPos, cp: CheckedProof): HoverItem {
   const fig = figure(cp.checkedSyllogism);
+  const spec = moodSpec(cp.checkedMood);
+  const triple = `${spec.majorPropType}${spec.minorPropType}${spec.conclusionPropType}`;
   const figText = fig !== null ? `Figure ${prettyFigure(fig)}, ` : "";
-  const figForm = fig !== null ? `\n${prettyFigureForm(fig)}` : "";
+  const figNum = fig !== null ? `-${prettyFigure(fig)}` : "";
   const swapNote = cp.checkedSwapped ? " (premises swapped)" : "";
-  const header = `${figText}${prettyMood(cp.checkedMood)}${swapNote}${figForm}`;
+  const header = `${figText}${prettyMood(cp.checkedMood)} (${triple}${figNum})${swapNote}\n${prettyMoodForm(cp.checkedMood)}`;
   const body = prettyProof(cp.checkedMood, cp.checkedSteps);
   return { hoverStart: s, hoverEnd: e, hoverText: `${header}\n\n${body}` };
 }

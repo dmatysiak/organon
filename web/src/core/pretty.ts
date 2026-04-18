@@ -54,9 +54,23 @@ export function prettyFigure(fig: Figure): string {
   }
 }
 
-export function prettyFigureForm(fig: Figure): string {
-  const [[ms, mp], [ns, np], [cs, cp]] = figureLabels(fig);
-  return `${ms}-${mp}, ${ns}-${np} ∴ ${cs}-${cp}`;
+export function prettyMoodForm(mood: Mood): string {
+  const spec = moodSpec(mood);
+  const [[ms, mp], [ns, np], [cs, cp]] = figureLabels(spec.moodFigure);
+  const strip = (s: string) => s.slice(1); // drop leading '?'
+  const renderProp = (pt: PropType, s: string, p: string): string => {
+    switch (pt) {
+      case PropType.A: return `every ${strip(s)} is ${strip(p)}`;
+      case PropType.E: return `no ${strip(s)} is ${strip(p)}`;
+      case PropType.I: return `some ${strip(s)} is ${strip(p)}`;
+      case PropType.O: return `some ${strip(s)} is not ${strip(p)}`;
+    }
+  };
+  return [
+    renderProp(spec.majorPropType, ms, mp),
+    renderProp(spec.minorPropType, ns, np),
+    `∴ ${renderProp(spec.conclusionPropType, cs, cp)}`,
+  ].join("\n");
 }
 
 export function prettyMood(mood: Mood): string {

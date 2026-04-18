@@ -4,7 +4,7 @@ module Organon.Syl.Pretty
     prettyProposition,
     prettySyllogism,
     prettyFigure,
-    prettyFigureForm,
+    prettyMoodForm,
     prettyMood,
     prettyProofStep,
     prettyProof,
@@ -69,11 +69,22 @@ prettyFigure FigII = "2"
 prettyFigure FigIII = "3"
 prettyFigure FigIV = "4"
 
--- | Render the term arrangement of a figure (e.g. "M-P, S-M ∴ S-P").
-prettyFigureForm :: Figure -> Text
-prettyFigureForm fig =
-  let ((ms, mp), (ns_, np), (cs, cp)) = figureLabels fig
-   in ms <> "-" <> mp <> ", " <> ns_ <> "-" <> np <> " ∴ " <> cs <> "-" <> cp
+-- | Render the canonical form of a mood (e.g. "every M is P, every S is M ∴ every S is P").
+prettyMoodForm :: Mood -> Text
+prettyMoodForm mood =
+  let spec = moodSpec mood
+      ((ms, mp), (ns_, np), (cs, cp)) = figureLabels (moodFigure spec)
+      strip = T.drop 1 -- drop leading '?'
+      renderProp pt s p = case pt of
+        A -> "every " <> strip s <> " is " <> strip p
+        E -> "no " <> strip s <> " is " <> strip p
+        I -> "some " <> strip s <> " is " <> strip p
+        O -> "some " <> strip s <> " is not " <> strip p
+   in T.intercalate "\n"
+        [ renderProp (majorPropType spec) ms mp
+        , renderProp (minorPropType spec) ns_ np
+        , "∴ " <> renderProp (conclusionPropType spec) cs cp
+        ]
 
 -- | Render a mood name.
 prettyMood :: Mood -> Text
