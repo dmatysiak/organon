@@ -218,3 +218,7 @@ Or point the extension at a specific binary via VS Code settings:
 ```
 
 Opening any `.syl` file starts the LSP server automatically.
+
+## Demo
+
+Try organon-syl in your browser [here](https://dmatysiak.github.io/organon-syl/).
