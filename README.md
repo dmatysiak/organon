@@ -19,7 +19,7 @@ hole-based solving. Type `:help` for commands.
 
 ```
 organon-syl> every M is P; every S is M; every S is P
-Valid: Barbara (Figure 1)
+Valid: Barbara (AAA-1)
 
 organon-syl> :prove every M is P; every S is M; every S is P
 Reduction of Barbara:
@@ -34,8 +34,8 @@ Reduction of Camestres:
 
 organon-syl> :solve every M is P; every S is M; ?
 2 solutions found:
-  Barbara (Figure 1): every S is P
-  Barbari (Figure 1): some S is P
+  Barbara (AAA-1): every S is P
+  Barbari (AAI-1): some S is P
 ```
 
 Use `:tradition strict|traditional|full` to select between 15, 19 or 24
@@ -50,10 +50,11 @@ stack exec organon-syl-lsp
 The server communicates over stdio and provides:
 
 - **Diagnostics** — invalid syllogisms, unknown `@references`, parse errors
-- **Hover** — mood, figure, reduction steps on proof names; resolved propositions on `@references`
+- **Hover** — mood, figure, triple notation (e.g. AAA-1), canonical form and reduction steps on proof names; resolved propositions on `@references` (with converted form when a modifier is applied)
 - **Go to definition** — jump from `@references` to the referenced proof
-- **Code actions** — auto-swap premises; fill holes with solved propositions
+- **Code actions** — auto-swap premises; fill holes with solved propositions; reduce to Figure 1
 - **Completion** — `@` triggers completion of proof names
+- **Formatting** — normalizes whitespace and casing on save or manual format
 
 ### `.syl` file format
 
@@ -87,6 +88,44 @@ proof Step4
   @Barbara
   ∴ some S is P
 ```
+
+### Reference modifiers
+
+When chaining proofs, a referenced conclusion sometimes needs to be
+converted before it can serve as a premise. Instead of restating the
+proposition, append a modifier to the reference:
+
+```
+proof Step1
+  no M is P
+  every S is M
+  ∴ no S is P
+
+-- simple conversion: no S is P → no P is S
+proof Step2
+  @Step1 conv
+  every M is P
+  ∴ no M is S
+
+-- conversion per accidens: every S is P → some P is S
+proof Step3
+  @Barbara per-accidens
+  every P is M
+  ∴ some M is S
+```
+
+This way, we preserve the provenance of propositions.
+
+Available modifiers:
+
+- `conv` — simple conversion (valid on E and I propositions)
+- `per-accidens` — conversion per accidens (valid on A and E propositions)
+
+The checker validates that the modifier is legal for the resolved
+proposition type and reports an error otherwise.
+
+The "Reduce to Figure 1" code action automatically emits `@ref conv` or
+`@ref per-accidens` when a referenced premise needs conversion.
 
 ### Holes
 
@@ -222,3 +261,12 @@ Opening any `.syl` file starts the LSP server automatically.
 ## Demo
 
 Try organon-syl in your browser [here](https://dmatysiak.github.io/organon-syl/).
+
+The web UI provides:
+
+- **Tabbed editor** with syntax highlighting, diagnostics and hover
+- **New / Open / Save** buttons for `.syl` files (double-click a tab to rename)
+- **Example files** loaded from a dropdown
+- **Built-in REPL** panel with the same commands as the terminal REPL
+- **Code actions** — swap premises, fill holes, reduce to Figure 1
+- **Format on save** via Cmd/Ctrl+S
