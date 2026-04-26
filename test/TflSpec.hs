@@ -227,7 +227,7 @@ parserSpec = describe "Tfl.Parser" $ do
     it "algebraic parse → pretty is correct" $ do
       let input = "-S +P"
       case parseStatement input of
-        Right stmt -> prettyStatement stmt `shouldBe` "−S +P"
+        Right stmt -> prettyStatement stmt `shouldBe` "-S +P"
         Left err -> expectationFailure (T.unpack err)
 
     it "English parse → English pretty → parse round-trips" $ do
@@ -242,7 +242,7 @@ parserSpec = describe "Tfl.Parser" $ do
     it "algebraic inference pretty output" $ do
       let input = "-M +P\n-S +M\n∴ -S +P"
       case parseInference input of
-        Right inf -> prettyInference inf `shouldBe` "−M +P\n−S +M\n∴ −S +P"
+        Right inf -> prettyInference inf `shouldBe` "-M +P\n-S +M\n∴ -S +P"
         Left err -> expectationFailure (T.unpack err)
 
   describe "Hole parsing" $ do
@@ -460,21 +460,21 @@ prettySpec :: Spec
 prettySpec = describe "Tfl.Pretty" $ do
 
   describe "Algebraic rendering" $ do
-    it "renders A: −S +P" $
-      prettyStatement (stmtA "S" "P") `shouldBe` "−S +P"
+    it "renders A: -S +P" $
+      prettyStatement (stmtA "S" "P") `shouldBe` "-S +P"
 
-    it "renders E: −S −P" $
-      prettyStatement (stmtE "S" "P") `shouldBe` "−S −P"
+    it "renders E: -S -P" $
+      prettyStatement (stmtE "S" "P") `shouldBe` "-S -P"
 
     it "renders I: +S +P" $
       prettyStatement (stmtI "S" "P") `shouldBe` "+S +P"
 
-    it "renders O: +S −P" $
-      prettyStatement (stmtO "S" "P") `shouldBe` "+S −P"
+    it "renders O: +S -P" $
+      prettyStatement (stmtO "S" "P") `shouldBe` "+S -P"
 
-    it "renders complemented: −non-S +P" $
+    it "renders complemented: -non-S +P" $
       prettyStatement (mkStmt [SignedTerm (Fixed Minus) (Atomic (mkCompTerm "S")) [], mkST (Fixed Plus) "P"])
-        `shouldBe` "−non-S +P"
+        `shouldBe` "-non-S +P"
 
     it "renders wild: *Socrates +P" $
       prettyStatement (mkStmt [mkST Wild "Socrates", mkST (Fixed Plus) "P"])
@@ -499,12 +499,12 @@ prettySpec = describe "Tfl.Pretty" $ do
 
     it "falls back to algebraic for 3-term statement" $
       prettyStatementEnglish Map.empty (mkStmt [mkST (Fixed Minus) "S", mkST (Fixed Plus) "M", mkST (Fixed Minus) "P"])
-        `shouldBe` "−S +M −P"
+        `shouldBe` "-S +M -P"
 
   describe "Positional subscript rendering" $ do
-    it "renders single subscript: −Boy<1>" $
+    it "renders single subscript: -Boy<1>" $
       prettySignedTerm (SignedTerm (Fixed Minus) (Atomic (mkTerm "Boy")) [1])
-        `shouldBe` "−Boy<1>"
+        `shouldBe` "-Boy<1>"
 
     it "renders multi subscript: +Lover<1,2>" $
       prettySignedTerm (SignedTerm (Fixed Plus) (Atomic (mkTerm "Lover")) [1, 2])
@@ -520,18 +520,18 @@ prettySpec = describe "Tfl.Pretty" $ do
             SignedTerm (Fixed Plus)  (Atomic (mkTerm "Lover")) [1, 2],
             SignedTerm (Fixed Plus)  (Atomic (mkTerm "Girl")) [2]
           ])
-        `shouldBe` "−Boy<1> +Lover<1,2> +Girl<2>"
+        `shouldBe` "-Boy<1> +Lover<1,2> +Girl<2>"
 
     it "round-trips relational statement through parse → pretty" $ do
       let input = "-Boy<1> +Lover<1,2> +Girl<2>"
       case parseStatement input of
-        Right stmt -> prettyStatement stmt `shouldBe` "−Boy<1> +Lover<1,2> +Girl<2>"
+        Right stmt -> prettyStatement stmt `shouldBe` "-Boy<1> +Lover<1,2> +Girl<2>"
         Left err -> expectationFailure (T.unpack err)
 
   describe "Inference rendering" $ do
     it "renders algebraic inference" $ do
       let inf = Inference [stmtA "M" "P", stmtA "S" "M"] (stmtA "S" "P")
-      prettyInference inf `shouldBe` "−M +P\n−S +M\n∴ −S +P"
+      prettyInference inf `shouldBe` "-M +P\n-S +M\n∴ -S +P"
 
     it "renders English inference" $ do
       let inf = Inference [stmtA "M" "P", stmtA "S" "M"] (stmtA "S" "P")

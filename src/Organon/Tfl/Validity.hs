@@ -200,7 +200,7 @@ prettySignedTermBrief :: SignedTerm -> Text
 prettySignedTermBrief st =
   let signStr = case sign st of
         Fixed Plus -> "+"
-        Fixed Minus -> "−"
+        Fixed Minus -> "-"
         Wild -> "*"
       posStr = case positions st of
         [] -> ""

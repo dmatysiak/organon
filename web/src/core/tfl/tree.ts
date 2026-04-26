@@ -485,7 +485,7 @@ export function renderTreeInteractive(tree: TreeData): HTMLElement {
     g.addEventListener("click", (ev) => {
       const st = n.signedTerm;
       const sign =
-        st.sign.tag === "Wild" ? "*" : st.sign.sign === Sign.Plus ? "+" : "−";
+        st.sign.tag === "Wild" ? "*" : st.sign.sign === Sign.Plus ? "+" : "-";
       const comp =
         st.termExpr.tag === "Atomic" && st.termExpr.term.complemented
           ? " (complemented)"

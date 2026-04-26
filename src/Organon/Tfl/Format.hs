@@ -40,7 +40,7 @@ normalizeTflLines = map normalizeLine
             && T.length stripped < T.length line
             && any
               (`T.isPrefixOf` T.toLower stripped)
-              [ "+", "-", "−", "*", "∴ ", "?", "@",
+              [ "+", "-", "*", "∴ ", "?", "@",
                 "every ", "no ", "some "
               ]
 

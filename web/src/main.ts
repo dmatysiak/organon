@@ -80,7 +80,7 @@ monaco.languages.setMonarchTokensProvider(TFL_LANG, {
         /(@[A-Za-z_][A-Za-z0-9_-]*)(\s+(?:conv|per-accidens|obv|contra)\b)?/,
         ["variable", "keyword"],
       ],
-      [/[+\u2212\-]/, "keyword.operator"],
+      [/[+\-]/, "keyword.operator"],
       [/\*/, "keyword.operator"],
       [/<\d+(?:,\d+)*>/, "number"],
       [/\b(every|no|some)\b/i, "keyword"],
@@ -179,12 +179,6 @@ proof UseConv
   every P is Q
   ∴ no Q is S
 
--- Obversion: no S is P → every S is non-P
-proof UseObv
-  @ConvExample obv
-  every non-P is Q
-  ∴ every S is Q
-
 -- ============================================================
 -- Holes: use ? for unknowns
 -- ============================================================
@@ -220,26 +214,26 @@ proof FindQuantifier
 -- Basic inferences (algebraic notation)
 -- ============================================================
 
--- Barbara: middle term M cancels (+M / −M)
+-- Barbara: middle term M cancels (+M / -M)
 proof Barbara
-  −S +M
-  −M +P
-  ∴ −S +P
+  -S +M
+  -M +P
+  ∴ -S +P
 
 proof Celarent
-  −S +M
-  −M −P
-  ∴ −S −P
+  -S +M
+  -M -P
+  ∴ -S -P
 
 proof Darii
   +S +M
-  −M +P
+  -M +P
   ∴ +S +P
 
 proof Ferio
   +S +M
-  −M −P
-  ∴ +S −P
+  -M -P
+  ∴ +S -P
 
 -- ============================================================
 -- English syntax (desugars to algebraic)
@@ -261,27 +255,27 @@ proof CelarentEng
 
 -- Three premises, two middles cancel
 proof Sorites3
-  −A +B
-  −B +C
-  −C +D
-  ∴ −A +D
+  -A +B
+  -B +C
+  -C +D
+  ∴ -A +D
 
 -- Four premises
 proof Sorites4
-  −A +B
-  −B +C
-  −C +D
-  −D +E
-  ∴ −A +E
+  -A +B
+  -B +C
+  -C +D
+  -D +E
+  ∴ -A +E
 
 -- ============================================================
 -- Complementation (non- prefix)
 -- ============================================================
 
 proof Complement
-  −S +non-P
-  −non-P +Q
-  ∴ −S +Q
+  -S +non-P
+  -non-P +Q
+  ∴ -S +Q
 
 -- ============================================================
 -- Relational terms with positional subscripts
@@ -291,46 +285,46 @@ rel Love "Lover-of" "Loved-by"
 
 -- Every Boy loves some Girl
 proof ActiveRelation
-  −Boy<1> +Love<1,2> +Girl<2>
-  ∴ −Boy<1> +Love<1,2> +Girl<2>
+  -Boy<1> +Love<1,2> +Girl<2>
+  ∴ -Boy<1> +Love<1,2> +Girl<2>
 
 -- Relational sorites: students read books
 proof RelationalSorites
-  −Student<1> +Reader<1,2>
-  −Reader<1,2> +Book<2>
-  ∴ −Student<1> +Book<2>
+  -Student<1> +Reader<1,2>
+  -Reader<1,2> +Book<2>
+  ∴ -Student<1> +Book<2>
 
 -- ============================================================
 -- Proof chaining with @references
 -- ============================================================
 
 proof Step1
-  −M +P
-  −S +M
-  ∴ −S +P
+  -M +P
+  -S +M
+  ∴ -S +P
 
 proof Step2
   @Step1
-  −P +Q
-  ∴ −S +Q
+  -P +Q
+  ∴ -S +Q
 
 -- Reference modifiers
 proof ModConv
-  −S −P
-  −Q +S
-  ∴ −Q −P
+  -S -P
+  -Q +S
+  ∴ -Q -P
 
 -- conv: swap terms (E or I only)
 proof UseConv
   @ModConv conv
-  −R +P
-  ∴ −R +P
+  -R +P
+  ∴ -R +P
 
 -- obv: flip one sign, complement its term
 proof UseObv
   @ModConv obv
-  −Q +P
-  ∴ −Q +P
+  -Q +P
+  ∴ -Q +P
 
 -- ============================================================
 -- Holes: use ? for unknowns
@@ -338,15 +332,15 @@ proof UseObv
 
 -- Solve for the conclusion
 proof FindConclusion
-  −M +P
-  −S +M
+  -M +P
+  -S +M
   ∴ ?
 
 -- Solve for a missing premise
 proof FindPremise
   ?
-  −S +M
-  ∴ −S +P
+  -S +M
+  ∴ -S +P
 `,
 };
 
@@ -1119,6 +1113,7 @@ function rangeOverlaps(
 initRepl({
   outputEl: document.getElementById("repl-output")!,
   inputEl: document.getElementById("repl-input") as HTMLInputElement,
+  langToggle: document.getElementById("repl-lang-toggle") as HTMLButtonElement,
 });
 
 // -- Draggable splitter ------------------------------------------------------

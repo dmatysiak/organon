@@ -60,13 +60,15 @@ handleInput modeRef input
       mode <- liftIO $ readIORef modeRef
       handleSolve mode args
       pure False
-  | cmd == ":tfl" = do
-      liftIO $ writeIORef modeRef Algebraic
-      liftIO $ TIO.putStrLn "Display mode: algebraic"
-      pure False
-  | cmd == ":english" = do
-      liftIO $ writeIORef modeRef English
-      liftIO $ TIO.putStrLn "Display mode: English"
+  | cmd == ":output" || cmd == ":o" = do
+      case T.toLower (T.strip rest) of
+        "tfl" -> do
+          liftIO $ writeIORef modeRef Algebraic
+          liftIO $ TIO.putStrLn "Display mode: algebraic"
+        "english" -> do
+          liftIO $ writeIORef modeRef English
+          liftIO $ TIO.putStrLn "Display mode: English"
+        _ -> liftIO $ TIO.putStrLn "Usage: :output tfl|english"
       pure False
   | T.isPrefixOf ":" input = do
       liftIO $ TIO.putStrLn $ "Unknown command: " <> cmd <> ". Type :help for available commands."
@@ -94,8 +96,7 @@ printHelp =
           "  :validate <inference>   Check cancellation validity (default for bare input)",
           "  :prove <inference>      Validate and show which terms cancel",
           "  :solve <premises>       Compute valid conclusion from premises (use ? for holes)",
-          "  :tfl                    Set display to algebraic notation",
-          "  :english                Set display to regimented English",
+          "  :output tfl|english     Set display mode (algebraic or English)",
           "  :help                   Show this help",
           "  :quit                   Exit",
           "",
@@ -110,7 +111,7 @@ printHelp =
           "Signs: + (affirmed), - (denied), * (wild/singular)",
           "Complemented terms: non-P",
           "",
-          "Shortcuts: :v, :p, :s, :h, :q"
+          "Shortcuts: :v, :p, :s, :o, :h, :q"
         ]
 
 -- ---------------------------------------------------------------------------

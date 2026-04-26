@@ -234,7 +234,7 @@ function diffTerms(
 
 function prettySignedTermBrief(st: SignedTerm): string {
   const signStr =
-    st.sign.tag === "Wild" ? "*" : st.sign.sign === Sign.Plus ? "+" : "\u2212";
+    st.sign.tag === "Wild" ? "*" : st.sign.sign === Sign.Plus ? "+" : "-";
   const posStr =
     st.positions.length === 0 ? "" : "<" + st.positions.join(",") + ">";
   if (st.termExpr.tag === "Atomic") {

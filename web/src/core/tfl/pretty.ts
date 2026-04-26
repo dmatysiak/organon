@@ -22,7 +22,7 @@ export function prettyTerm(t: Term): string {
 }
 
 export function prettySign(s: Sign): string {
-  return s === Sign.Plus ? "+" : "\u2212";
+  return s === Sign.Plus ? "+" : "-";
 }
 
 export function prettyWildSign(ws: WildSign): string {

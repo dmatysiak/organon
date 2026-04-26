@@ -39,7 +39,7 @@ prettyTerm (Term n True) = "non-" <> n
 -- | Render a sign as its algebraic symbol.
 prettySign :: Sign -> Text
 prettySign Plus = "+"
-prettySign Minus = "−"
+prettySign Minus = "-"
 
 -- | Render a wild sign as its algebraic symbol.
 prettyWildSign :: WildSign -> Text

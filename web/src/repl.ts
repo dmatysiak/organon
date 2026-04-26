@@ -31,19 +31,28 @@ import type { Inference as TflInference } from "./core/tfl/types";
 import type { ValidationResult as TflValidationResult } from "./core/tfl/validity";
 import {
   prettyInference as prettyTflInference,
+  prettyInferenceEnglish as prettyTflInferenceEnglish,
+  prettyStatementEnglish as prettyTflStatementEnglish,
   prettyCancellation,
   prettyValidationResult,
+  prettyStatement as prettyTflStatement,
 } from "./core/tfl/pretty";
 import { buildTree, renderTreeInteractive } from "./core/tfl/tree";
+import { buildTermTree, renderTermTree } from "./core/tfl/termtree";
+import type { Statement as TflStatement } from "./core/tfl/types";
 
 type Lang = "syl" | "tfl";
+type TflOutputMode = "tfl" | "english" | "visual";
 
 // -- State -------------------------------------------------------------------
 
 let tradition: Tradition = Tradition.Traditional;
 let lang: Lang = "syl";
+let tflOutputMode: TflOutputMode = "tfl";
 let lastTflInference: TflInference | null = null;
 let lastTflResult: TflValidationResult | null = null;
+let tflProofs: { name: string; conclusion: TflStatement }[] = [];
+let tflProofCounter = 0;
 
 // -- Output rendering -------------------------------------------------------
 
@@ -55,6 +64,7 @@ type OutputLine =
 export type ReplUI = {
   outputEl: HTMLElement;
   inputEl: HTMLInputElement;
+  langToggle: HTMLButtonElement;
 };
 
 function appendLines(ui: ReplUI, lines: OutputLine[]): void {
@@ -100,18 +110,19 @@ function handleHelp(): OutputLine[] {
       info(
         "  :validate <inference>   Check cancellation validity (default for bare input)",
       ),
+      info("  :output tfl|english|visual  Set display mode"),
       info(
-        "  :tree [<inference>]     Show cancellation tree (last validated if no arg)",
+        "  :tree [<name>]          Show term tree (all proofs or named proof)",
       ),
       info("  :lang syl|tfl           Switch language"),
       info("  :clear                  Clear output"),
       info("  :help                   Show this help"),
       info(""),
       info("Inference format (semicolons separate premises from conclusion):"),
-      info("  −S +M; −M +P; −S +P"),
+      info("  -S +M; -M +P; -S +P"),
       info("  every S is M; every M is P; every S is P"),
       info(""),
-      info("Shortcuts: :v, :tr, :l, :h"),
+      info("Shortcuts: :v, :o, :tr, :l, :h"),
     ];
   }
   return [
@@ -302,39 +313,85 @@ function handleTflValidate(input: string): OutputLine[] {
   const res = tflValidate(parsed);
   lastTflInference = parsed;
   lastTflResult = res;
+
+  // Track valid proofs for term tree
+  if (res.tag === "Valid") {
+    tflProofCounter++;
+    tflProofs.push({
+      name: `proof-${tflProofCounter}`,
+      conclusion: parsed.conclusion,
+    });
+  }
+
+  if (tflOutputMode === "visual") {
+    const tree = buildTree(parsed, res);
+    const el = renderTreeInteractive(tree);
+    return [{ element: el, cls: "dom" as const }];
+  }
+
+  if (tflOutputMode === "english") {
+    const rl = new Map();
+    if (res.tag === "Valid") {
+      return [
+        result("Valid"),
+        result("  " + prettyTflStatementEnglish(rl, parsed.conclusion)),
+        ...prettyCancellation(res.cancellation).split("\n").map(info),
+      ];
+    }
+    return [
+      err("Invalid"),
+      ...prettyCancellation(res.cancellation).split("\n").map(err),
+      ...res.errors.map((e) => err("  " + e)),
+    ];
+  }
+
+  // Default: algebraic (tfl)
   return prettyValidationResult(res)
     .split("\n")
     .map((l) => (res.tag === "Valid" ? result(l) : err(l)));
 }
 
-function handleTree(args: string): OutputLine[] {
-  let inf: TflInference | null = null;
-  let res: TflValidationResult | null = null;
+function handleOutput(args: string): OutputLine[] {
+  switch (args.toLowerCase()) {
+    case "tfl":
+      tflOutputMode = "tfl";
+      return [info("Display mode: algebraic")];
+    case "english":
+      tflOutputMode = "english";
+      return [info("Display mode: English")];
+    case "visual":
+      tflOutputMode = "visual";
+      return [info("Display mode: visual (cancellation tree)")];
+    default:
+      return [err("Usage: :output tfl|english|visual")];
+  }
+}
 
+function handleTermTree(args: string): OutputLine[] {
   if (args.trim().length > 0) {
-    const parsed = parseTflInference(args);
-    if (parsed instanceof TflParseError) {
-      return [err(`Parse error: ${parsed.message}`)];
+    // :tree PROOF-NAME — show tree for a single named proof
+    const name = args.trim();
+    const match = tflProofs.find((p) => p.name === name);
+    if (!match) {
+      return [err(`No proof named "${name}". Use :tree to see all.`)];
     }
-    res = tflValidate(parsed);
-    inf = parsed;
-    lastTflInference = inf;
-    lastTflResult = res;
-  } else {
-    inf = lastTflInference;
-    res = lastTflResult;
+    const tree = buildTermTree([match]);
+    if (tree.terms.length === 0) {
+      return [info("No term relations found in this proof.")];
+    }
+    const el = renderTermTree(tree);
+    return [{ element: el, cls: "dom" as const }];
   }
 
-  if (!inf || !res) {
-    return [
-      err(
-        "No inference to visualize. Run :validate first, or pass an inference.",
-      ),
-    ];
+  // :tree — show tree from all validated proofs in session
+  if (tflProofs.length === 0) {
+    return [err("No validated proofs in session. Run some inferences first.")];
   }
-
-  const tree = buildTree(inf, res);
-  const el = renderTreeInteractive(tree);
+  const tree = buildTermTree(tflProofs);
+  if (tree.terms.length === 0) {
+    return [info("No term relations found across proofs.")];
+  }
+  const el = renderTermTree(tree);
   return [{ element: el, cls: "dom" as const }];
 }
 
@@ -358,6 +415,7 @@ function updatePrompt(ui: ReplUI): void {
   if (label) {
     label.textContent = `organon/${lang}>`;
   }
+  ui.langToggle.textContent = lang.toUpperCase();
 }
 
 // -- Command dispatch --------------------------------------------------------
@@ -401,9 +459,13 @@ function dispatch(raw: string, ui: ReplUI): void {
       case ":v":
         lines = handleTflValidate(args);
         break;
+      case ":output":
+      case ":o":
+        lines = handleOutput(args);
+        break;
       case ":tree":
       case ":tr":
-        lines = handleTree(args);
+        lines = handleTermTree(args);
         break;
       default:
         if (cmd.startsWith(":")) {
@@ -499,5 +561,11 @@ export function initRepl(ui: ReplUI): void {
         ui.inputEl.value = "";
       }
     }
+  });
+
+  ui.langToggle.addEventListener("click", () => {
+    const next = lang === "syl" ? "tfl" : "syl";
+    const lines = handleLang(next, ui);
+    appendLines(ui, lines);
   });
 }

@@ -433,7 +433,7 @@ export function applyPerAccidens(stmt: Statement): Statement | null {
     st2.sign.tag === "Fixed" &&
     st2.sign.sign === Sign.Plus
   ) {
-    // A: −S +P → +P +S
+    // A: -S +P → +P +S
     return {
       terms: [
         {
@@ -455,7 +455,7 @@ export function applyPerAccidens(stmt: Statement): Statement | null {
     st2.sign.tag === "Fixed" &&
     st2.sign.sign === Sign.Minus
   ) {
-    // E: −S −P → +P −S
+    // E: -S -P → +P -S
     return {
       terms: [
         {
