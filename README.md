@@ -1,6 +1,7 @@
-# organon-syl
+# organon
 
-A proof assistant for medieval syllogistic logic — figures, moods and reductions.
+A proof assistant for categorical logic — traditional syllogistic and
+term functor logic (TFL).
 
 ## Building
 
@@ -11,28 +12,28 @@ stack build
 ## REPL
 
 ```
-stack exec organon-syl-repl
+stack exec organon-repl
 ```
 
 The REPL supports validation, proof by reduction to Figure 1 and
 hole-based solving. Type `:help` for commands.
 
 ```
-organon-syl> every M is P; every S is M; every S is P
+organon> every M is P; every S is M; every S is P
 Valid: Barbara (AAA-1)
 
-organon-syl> :prove every M is P; every S is M; every S is P
+organon> :prove every M is P; every S is M; every S is P
 Reduction of Barbara:
   1. Axiom: Barbara (perfect syllogism)
 
-organon-syl> :prove every P is M; no S is M; no S is P
+organon> :prove every P is M; no S is M; no S is P
 Reduction of Camestres:
   1. Simple conversion: no S is M → no M is S
   2. Mutate: swap major and minor premises
   3. Axiom: Celarent (perfect syllogism)
   4. Simple conversion: no P is S → no S is P
 
-organon-syl> :solve every M is P; every S is M; ?
+organon> :solve every M is P; every S is M; ?
 2 solutions found:
   Barbara (AAA-1): every S is P
   Barbari (AAI-1): some S is P
@@ -44,7 +45,7 @@ valid moods.
 ## LSP server
 
 ```
-stack exec organon-syl-lsp
+stack exec organon-lsp
 ```
 
 The server communicates over stdio and provides:
@@ -177,17 +178,176 @@ premise regardless of which tradition validated it.
 ## Batch checker
 
 ```
-stack exec organon-syl-check -- [file.syl | dir ...]
+stack exec organon-check -- [file.syl | dir ...]
 ```
 
 Checks `.syl` files and prints diagnostics in `file:line:col: severity: message`
 format. Defaults to the current directory. Silent on success; exits non-zero on errors.
 
 ```
-$ stack exec organon-syl-check -- examples/Basics.syl examples/God.syl
+$ stack exec organon-check -- examples/Basics.syl examples/God.syl
 $ echo $?
 0
 ```
+
+## Term Functor Logic (TFL)
+
+Organon includes a second language, TFL, based on Sommers' term functor
+logic. Where syllogistic uses regimented English ("every S is P"), TFL
+uses signed terms with algebraic cancellation to determine validity.
+
+### Notation
+
+Each term carries a sign: `+` (particular/affirmative) or `−` (universal/negative).
+
+| English         | Algebraic |
+| --------------- | --------- |
+| every S is P    | −S +P     |
+| no S is P       | −S −P     |
+| some S is P     | +S +P     |
+| some S is not P | +S −P     |
+
+A wildcard sign `*` marks a term whose quantity is unspecified (used for
+holes and complementation-indifferent positions).
+
+### Validity by cancellation
+
+An inference is valid when its middle terms cancel — each middle term
+appears with opposite signs across premises — and the remaining
+uncancelled terms match the conclusion.
+
+```
+−S +M   −M +P   ∴ −S +P
+```
+
+Here `+M` and `−M` cancel, leaving `−S +P`.
+
+### Sorites
+
+TFL naturally handles multi-premise chains (sorites) that would require
+separate syllogisms in traditional logic:
+
+```
+−A +B   −B +C   −C +D   ∴ −A +D
+```
+
+### Relational terms
+
+Terms can carry positional subscripts for relational reasoning:
+
+```
+−Boy<1> +Love<1,2> +Girl<2>
+```
+
+This reads: every Boy is a Lover-of some Girl. The positions bind
+terms into argument slots of the relation.
+
+English rendering uses `-of` (active) and `-by` (passive) suffixes by
+default. Custom forms are declared with `rel`:
+
+```
+rel Love "Lover-of" "Loved-by"
+```
+
+### Complementation
+
+`non-` prefixes a complemented term:
+
+```
+−S +non-P
+```
+
+In English: "every S is non-P".
+
+### `.tfl` file format
+
+```
+-- import conclusions from another .tfl file
+open Basics
+
+-- declare relational term forms (optional)
+rel Love "Lover-of" "Loved-by"
+
+proof Barbara
+  −M +P
+  −S +M
+  ∴ −S +P
+
+-- English syntax works too
+proof BarbaraEng
+  every M is P
+  every S is M
+  ∴ every S is P
+
+-- reference a prior conclusion as a premise
+proof Chain
+  @Barbara
+  −P +Q
+  ∴ −S +Q
+
+-- reference modifiers: conv, per-accidens, obv, contra
+proof Converted
+  @Barbara conv
+  −P +Q
+  ∴ −P +Q
+```
+
+### TFL reference modifiers
+
+| Modifier       | Effect                                      | Valid on |
+| -------------- | ------------------------------------------- | -------- |
+| `conv`         | swap terms (simple conversion)              | E, I     |
+| `per-accidens` | swap terms + weaken universal to particular | A, E     |
+| `obv`          | flip one sign, complement its term          | all      |
+| `contra`       | flip all signs, complement all terms        | A, O     |
+
+### TFL holes
+
+Use `?` for unknown terms, signs or entire statements:
+
+```
+proof FindConclusion
+  −M +P
+  −S +M
+  ∴ ?
+
+proof FindPremise
+  ?
+  −S +M
+  ∴ −S +P
+```
+
+The LSP and REPL solve holes by computing valid cancellations.
+
+### TFL REPL
+
+```
+stack exec organon-repl tfl
+```
+
+Commands:
+
+| Command               | Description                                  |
+| --------------------- | -------------------------------------------- |
+| `−S +M; −M +P; −S +P` | validate an inference (default)              |
+| `:validate <inf>`     | check cancellation validity                  |
+| `:prove <inf>`        | validate and show which terms cancel         |
+| `:solve <premises>`   | compute valid conclusion (use `?` for holes) |
+| `:tfl`                | set display to algebraic notation            |
+| `:english`            | set display to regimented English            |
+| `:help`               | show available commands                      |
+
+### TFL LSP features
+
+The LSP server handles `.tfl` files with the same feature set as `.syl`:
+
+- **Diagnostics** — invalid inferences, unknown `@references`, parse errors
+- **Hover** — cancellation details and English rendering on proof names;
+  resolved statements on `@references`
+- **Go to definition** — jump from `@references` to the referenced proof
+- **Code actions** — fill holes with solved conclusions
+- **Completion** — `@` triggers completion of proof names
+- **Formatting** — normalizes whitespace on save or manual format
 
 ## Running tests
 
@@ -217,24 +377,24 @@ Requires [`vsce`](https://github.com/microsoft/vscode-vsce):
 ```
 npm install -g @vscode/vsce   # one-time
 cd editors/vscode
-vsce package --allow-missing-repository -o organon-syl-0.1.0.vsix
+vsce package --allow-missing-repository -o organon-0.1.0.vsix
 ```
 
-This produces `organon-syl-0.1.0.vsix` in the extension directory.
+This produces `organon-0.1.0.vsix` in the extension directory.
 
 ### Installing the extension
 
 First install:
 
 ```
-code --install-extension editors/vscode/organon-syl-0.1.0.vsix
+code --install-extension editors/vscode/organon-0.1.0.vsix
 ```
 
 Reinstalling (after a rebuild):
 
 ```
-code --uninstall-extension organon.organon-syl
-code --install-extension editors/vscode/organon-syl-0.1.0.vsix
+code --uninstall-extension organon.organon
+code --install-extension editors/vscode/organon-0.1.0.vsix
 ```
 
 After installing or reinstalling, reload the VS Code window
@@ -242,7 +402,7 @@ After installing or reinstalling, reload the VS Code window
 
 ### LSP server setup
 
-Place the `organon-syl-lsp` binary on your `PATH`:
+Place the `organon-lsp` binary on your `PATH`:
 
 ```
 stack install
@@ -252,7 +412,7 @@ Or point the extension at a specific binary via VS Code settings:
 
 ```json
 {
-  "organon-syl.serverPath": "/path/to/.stack-work/install/.../bin/organon-syl-lsp"
+  "organon.serverPath": "/path/to/.stack-work/install/.../bin/organon-lsp"
 }
 ```
 
@@ -260,13 +420,13 @@ Opening any `.syl` file starts the LSP server automatically.
 
 ## Demo
 
-Try organon-syl in your browser [here](https://dmatysiak.github.io/organon-syl/).
+Try organon in your browser [here](https://dmatysiak.github.io/organon/).
 
 The web UI provides:
 
-- **Tabbed editor** with syntax highlighting, diagnostics and hover
-- **New / Open / Save** buttons for `.syl` files (double-click a tab to rename)
-- **Example files** loaded from a dropdown
+- **Tabbed editor** with syntax highlighting, diagnostics and hover for `.syl` and `.tfl` files
+- **New / Open / Save** buttons (double-click a tab to rename)
+- **Example files** for both Syl and TFL
 - **Built-in REPL** panel with the same commands as the terminal REPL
-- **Code actions** — swap premises, fill holes, reduce to Figure 1
+- **Code actions** — swap premises, fill holes, reduce to Figure 1 (Syl); fill holes (TFL)
 - **Format on save** via Cmd/Ctrl+S

@@ -1,17 +1,28 @@
 import * as monaco from "monaco-editor";
 import editorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
 
-import { parseDocument } from "./core/document";
+import { parseDocument as parseSylDocument } from "./core/document";
 import { ParseError } from "./core/parser";
+import { ParseError as TflParseError } from "./core/tfl/parser";
 import {
-  checkDocument,
+  checkDocument as checkSylDocument,
   Severity,
-  type CheckResult,
-  type ExternalContext,
+  type CheckResult as SylCheckResult,
+  type ExternalContext as SylExternalContext,
 } from "./core/check";
+import { parseDocument as parseTflDocument } from "./core/tfl/document";
+import {
+  checkDocument as checkTflDocument,
+  Severity as TflSeverity,
+  type CheckResult as TflCheckResult,
+  type ExternalContext as TflExternalContext,
+} from "./core/tfl/check";
 import { prettyMood } from "./core/pretty";
-import { formatText } from "./core/format";
+import { formatText as formatSylText } from "./core/format";
+import { formatText as formatTflText } from "./core/tfl/format";
 import { initRepl } from "./repl";
+
+type Lang = "syl" | "tfl";
 
 // Monaco requires web workers for editor functionality.
 self.MonacoEnvironment = {
@@ -20,12 +31,14 @@ self.MonacoEnvironment = {
 
 // -- Language registration ---------------------------------------------------
 
-const LANG_ID = "syl";
+const SYL_LANG = "syl";
+const TFL_LANG = "tfl";
 
-monaco.languages.register({ id: LANG_ID, extensions: [".syl"] });
+monaco.languages.register({ id: SYL_LANG, extensions: [".syl"] });
+monaco.languages.register({ id: TFL_LANG, extensions: [".tfl"] });
 
-// Monarch tokenizer derived from the tmLanguage grammar.
-monaco.languages.setMonarchTokensProvider(LANG_ID, {
+// Monarch tokenizer for .syl (syllogistic)
+monaco.languages.setMonarchTokensProvider(SYL_LANG, {
   tokenizer: {
     root: [
       [/--.*$/, "comment"],
@@ -51,6 +64,33 @@ monaco.languages.setMonarchTokensProvider(LANG_ID, {
   },
 });
 
+// Monarch tokenizer for .tfl (term functor logic)
+monaco.languages.setMonarchTokensProvider(TFL_LANG, {
+  tokenizer: {
+    root: [
+      [/--.*$/, "comment"],
+      [/^(open)(\s+)(\S+)/, ["keyword", "", "type.identifier"]],
+      [/^(proof)(\s+)(\S+)/, ["keyword", "", "function"]],
+      [/∴|therefore\b/, "keyword"],
+      [
+        /(@[A-Za-z_][A-Za-z0-9_-]*\.[A-Za-z_][A-Za-z0-9_-]*)(\s+(?:conv|per-accidens|obv|contra)\b)?/,
+        ["variable", "keyword"],
+      ],
+      [
+        /(@[A-Za-z_][A-Za-z0-9_-]*)(\s+(?:conv|per-accidens|obv|contra)\b)?/,
+        ["variable", "keyword"],
+      ],
+      [/[+\u2212\-]/, "keyword.operator"],
+      [/\*/, "keyword.operator"],
+      [/<\d+(?:,\d+)*>/, "number"],
+      [/\b(every|no|some)\b/i, "keyword"],
+      [/\b(is\s+not|is)\b/, "keyword"],
+      [/\bnon-/, "keyword"],
+      [/\?/, "variable"],
+    ],
+  },
+});
+
 // -- Unicode input abbreviations (Lean/Agda style) ---------------------------
 
 const UNICODE_ABBREVS: Record<string, string> = {
@@ -61,10 +101,16 @@ const UNICODE_ABBREVS: Record<string, string> = {
 // -- Example content ---------------------------------------------------------
 
 const EXAMPLES: Record<string, string> = {
-  basics: `-- Fundamental syllogisms in all four figures.
+  syl: `-- Syllogistic Examples
+-- Demonstrates the full range of .syl functionality.
 
 tradition Full
 
+-- ============================================================
+-- Basic figures
+-- ============================================================
+
+-- Figure 1 (perfect syllogisms)
 proof Barbara
   every M is P
   every S is M
@@ -84,28 +130,241 @@ proof Ferio
   no M is P
   some S is M
   ∴ some S is not P
-`,
-  holes: `-- Hole-based solving: use ? for unknowns.
 
-tradition Full
+-- Figure 2
+proof Cesare
+  no P is M
+  every S is M
+  ∴ no S is P
 
+proof Camestres
+  every P is M
+  no S is M
+  ∴ no S is P
+
+-- Figure 3 (requires existential import)
+proof Darapti
+  every M is P
+  every M is S
+  ∴ some S is P
+
+-- Figure 4
+proof Bramantip
+  every P is M
+  every M is S
+  ∴ some S is P
+
+-- ============================================================
+-- Proof chaining with @references
+-- ============================================================
+
+-- Use a proved conclusion as a premise
+proof ChainedStep
+  @Barbara
+  @Cesare
+  ∴ no S is P
+
+-- ============================================================
+-- Reference modifiers
+-- ============================================================
+
+proof ConvExample
+  no M is P
+  every S is M
+  ∴ no S is P
+
+-- Simple conversion: no S is P → no P is S
+proof UseConv
+  @ConvExample conv
+  every P is Q
+  ∴ no Q is S
+
+-- Obversion: no S is P → every S is non-P
+proof UseObv
+  @ConvExample obv
+  every non-P is Q
+  ∴ every S is Q
+
+-- ============================================================
+-- Holes: use ? for unknowns
+-- ============================================================
+
+-- The solver finds valid conclusions
 proof FindConclusion
   every M is P
   every S is M
   ∴ ?
 
-proof FindSubject
+-- Unknown premise
+proof FindPremise
+  ?
+  every S is M
+  ∴ every S is P
+
+-- Unknown term
+proof FindTerm
   every M is P
   every ? is M
   ∴ every ? is P
+
+-- Unknown quantifier
+proof FindQuantifier
+  every M is P
+  every S is M
+  ∴ ? S is P
+`,
+  tfl: `-- Term Functor Logic Examples
+-- Demonstrates the full range of .tfl functionality.
+
+-- ============================================================
+-- Basic inferences (algebraic notation)
+-- ============================================================
+
+-- Barbara: middle term M cancels (+M / −M)
+proof Barbara
+  −S +M
+  −M +P
+  ∴ −S +P
+
+proof Celarent
+  −S +M
+  −M −P
+  ∴ −S −P
+
+proof Darii
+  +S +M
+  −M +P
+  ∴ +S +P
+
+proof Ferio
+  +S +M
+  −M −P
+  ∴ +S −P
+
+-- ============================================================
+-- English syntax (desugars to algebraic)
+-- ============================================================
+
+proof BarbaraEng
+  every S is M
+  every M is P
+  ∴ every S is P
+
+proof CelarentEng
+  every S is M
+  no M is P
+  ∴ no S is P
+
+-- ============================================================
+-- Sorites (multi-premise chains)
+-- ============================================================
+
+-- Three premises, two middles cancel
+proof Sorites3
+  −A +B
+  −B +C
+  −C +D
+  ∴ −A +D
+
+-- Four premises
+proof Sorites4
+  −A +B
+  −B +C
+  −C +D
+  −D +E
+  ∴ −A +E
+
+-- ============================================================
+-- Complementation (non- prefix)
+-- ============================================================
+
+proof Complement
+  −S +non-P
+  −non-P +Q
+  ∴ −S +Q
+
+-- ============================================================
+-- Relational terms with positional subscripts
+-- ============================================================
+
+rel Love "Lover-of" "Loved-by"
+
+-- Every Boy loves some Girl
+proof ActiveRelation
+  −Boy<1> +Love<1,2> +Girl<2>
+  ∴ −Boy<1> +Love<1,2> +Girl<2>
+
+-- Relational sorites: students read books
+proof RelationalSorites
+  −Student<1> +Reader<1,2>
+  −Reader<1,2> +Book<2>
+  ∴ −Student<1> +Book<2>
+
+-- ============================================================
+-- Proof chaining with @references
+-- ============================================================
+
+proof Step1
+  −M +P
+  −S +M
+  ∴ −S +P
+
+proof Step2
+  @Step1
+  −P +Q
+  ∴ −S +Q
+
+-- Reference modifiers
+proof ModConv
+  −S −P
+  −Q +S
+  ∴ −Q −P
+
+-- conv: swap terms (E or I only)
+proof UseConv
+  @ModConv conv
+  −R +P
+  ∴ −R +P
+
+-- obv: flip one sign, complement its term
+proof UseObv
+  @ModConv obv
+  −Q +P
+  ∴ −Q +P
+
+-- ============================================================
+-- Holes: use ? for unknowns
+-- ============================================================
+
+-- Solve for the conclusion
+proof FindConclusion
+  −M +P
+  −S +M
+  ∴ ?
+
+-- Solve for a missing premise
+proof FindPremise
+  ?
+  −S +M
+  ∴ −S +P
 `,
 };
 
 // -- Tab / buffer management -------------------------------------------------
 
+function langFromName(name: string): Lang {
+  if (name.endsWith(".tfl")) return "tfl";
+  return "syl";
+}
+
+function langIdFor(lang: Lang): string {
+  return lang === "tfl" ? TFL_LANG : SYL_LANG;
+}
+
 type Tab = {
   id: string;
   name: string;
+  lang: Lang;
   model: monaco.editor.ITextModel;
   fileHandle: FileSystemFileHandle | null;
   dirty: boolean;
@@ -125,11 +384,13 @@ function createTab(
 ): Tab {
   tabCounter++;
   const id = `tab-${tabCounter}`;
+  const lang = langFromName(name);
   const uri = monaco.Uri.parse(`inmemory://model/${id}/${name}`);
-  const model = monaco.editor.createModel(content, LANG_ID, uri);
+  const model = monaco.editor.createModel(content, langIdFor(lang), uri);
   const tab: Tab = {
     id,
     name,
+    lang,
     model,
     fileHandle,
     dirty: false,
@@ -241,7 +502,12 @@ function startRenameTab(tab: Tab, label: HTMLElement): void {
   const commit = () => {
     const raw = input.value.trim();
     if (raw.length > 0) {
-      tab.name = raw.endsWith(".syl") ? raw : raw + ".syl";
+      tab.name =
+        raw.endsWith(".syl") || raw.endsWith(".tfl")
+          ? raw
+          : raw + "." + tab.lang;
+      tab.lang = langFromName(tab.name);
+      monaco.editor.setModelLanguage(tab.model, langIdFor(tab.lang));
     }
     renderTabs();
     editor.focus();
@@ -272,7 +538,7 @@ function activeTab(): Tab | null {
 const container = document.getElementById("editor-container")!;
 
 const editor = monaco.editor.create(container, {
-  language: LANG_ID,
+  language: SYL_LANG,
   theme: "vs-dark",
   minimap: { enabled: false },
   fontSize: 15,
@@ -283,11 +549,37 @@ const editor = monaco.editor.create(container, {
 });
 
 // Must be declared before createTab → switchToTab → runCheck uses it.
-const emptyExt: ExternalContext = new Map();
-let lastCheckResult: CheckResult | null = null;
+const emptySylExt: SylExternalContext = new Map();
+const emptyTflExt: TflExternalContext = { namespaces: new Map() };
+
+type UnifiedCheckResult = {
+  lang: Lang;
+  checkDiagnostics: {
+    diagStart: { posLine: number; posCol: number };
+    diagEnd: { posLine: number; posCol: number };
+    diagSeverity: string;
+    diagMessage: string;
+  }[];
+  checkHovers: {
+    hoverStart: { posLine: number; posCol: number };
+    hoverEnd: { posLine: number; posCol: number };
+    hoverText: string;
+  }[];
+  checkDefinitions: {
+    defRefStart: { posLine: number; posCol: number };
+    defRefEnd: { posLine: number; posCol: number };
+    defTargetFile: string | null;
+    defTargetStart: { posLine: number; posCol: number };
+    defTargetEnd: { posLine: number; posCol: number };
+  }[];
+  sylResult: SylCheckResult | null;
+  tflResult: TflCheckResult | null;
+};
+
+let lastCheckResult: UnifiedCheckResult | null = null;
 
 // Create initial tab
-createTab("Basics.syl", EXAMPLES.basics);
+createTab("SylExamples.syl", EXAMPLES.syl);
 
 // -- Example buttons ---------------------------------------------------------
 
@@ -297,7 +589,9 @@ document
     btn.addEventListener("click", () => {
       const key = btn.dataset.example;
       if (key && EXAMPLES[key]) {
-        const name = key.charAt(0).toUpperCase() + key.slice(1) + ".syl";
+        const ext = key === "tfl" ? ".tfl" : ".syl";
+        const name =
+          key.charAt(0).toUpperCase() + key.slice(1) + "Examples" + ext;
         createTab(name, EXAMPLES[key]);
       }
     });
@@ -306,7 +600,9 @@ document
 // -- File operations ---------------------------------------------------------
 
 document.getElementById("btn-new")!.addEventListener("click", () => {
-  createTab("Untitled.syl", "");
+  const tab = activeTab();
+  const lang = tab ? tab.lang : "syl";
+  createTab(`Untitled.${lang}`, "");
 });
 
 document.getElementById("btn-open")!.addEventListener("click", async () => {
@@ -315,8 +611,8 @@ document.getElementById("btn-open")!.addEventListener("click", async () => {
       const [handle] = await (window as any).showOpenFilePicker({
         types: [
           {
-            description: "Syllogistic files",
-            accept: { "text/plain": [".syl"] },
+            description: "Organon files",
+            accept: { "text/plain": [".syl", ".tfl"] },
           },
         ],
         multiple: false,
@@ -331,7 +627,7 @@ document.getElementById("btn-open")!.addEventListener("click", async () => {
     // Fallback: file input
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = ".syl";
+    input.accept = ".syl,.tfl";
     input.addEventListener("change", async () => {
       const file = input.files?.[0];
       if (file) {
@@ -352,7 +648,8 @@ async function saveActiveTab(): Promise<void> {
   if (!tab) return;
 
   // Format on save
-  const formatted = formatText(tab.model.getValue());
+  const fmt = tab.lang === "tfl" ? formatTflText : formatSylText;
+  const formatted = fmt(tab.model.getValue());
   if (formatted !== tab.model.getValue()) {
     tab.model.setValue(formatted);
   }
@@ -365,8 +662,8 @@ async function saveActiveTab(): Promise<void> {
           suggestedName: tab.name,
           types: [
             {
-              description: "Syllogistic files",
-              accept: { "text/plain": [".syl"] },
+              description: "Organon files",
+              accept: { "text/plain": [".syl", ".tfl"] },
             },
           ],
         }));
@@ -440,42 +737,96 @@ function runCheck(): void {
   const model = editor.getModel();
   if (!model) return;
 
+  const tab = activeTab();
+  const lang: Lang = tab ? tab.lang : "syl";
+  const langId = langIdFor(lang);
   const text = model.getValue();
-  const parsed = parseDocument(text);
 
-  if (parsed instanceof ParseError) {
-    monaco.editor.setModelMarkers(model, LANG_ID, [
-      {
-        startLineNumber: parsed.line,
-        startColumn: parsed.col,
-        endLineNumber: parsed.line,
-        endColumn: parsed.col + 1,
-        message: parsed.message,
-        severity: monaco.MarkerSeverity.Error,
-      },
-    ]);
-    lastCheckResult = null;
-    return;
+  if (lang === "tfl") {
+    const parsed = parseTflDocument(text);
+    if (parsed instanceof TflParseError) {
+      monaco.editor.setModelMarkers(model, langId, [
+        {
+          startLineNumber: parsed.line,
+          startColumn: parsed.col,
+          endLineNumber: parsed.line,
+          endColumn: parsed.col + 1,
+          message: parsed.message,
+          severity: monaco.MarkerSeverity.Error,
+        },
+      ]);
+      lastCheckResult = null;
+      return;
+    }
+
+    const result = checkTflDocument(emptyTflExt, parsed);
+    lastCheckResult = {
+      lang: "tfl",
+      checkDiagnostics: result.checkDiagnostics,
+      checkHovers: result.checkHovers,
+      checkDefinitions: result.checkDefinitions,
+      sylResult: null,
+      tflResult: result,
+    };
+
+    const markers: monaco.editor.IMarkerData[] = result.checkDiagnostics.map(
+      (d) => ({
+        startLineNumber: d.diagStart.posLine,
+        startColumn: d.diagStart.posCol,
+        endLineNumber: d.diagEnd.posLine,
+        endColumn: d.diagEnd.posCol,
+        message: d.diagMessage,
+        severity:
+          d.diagSeverity === TflSeverity.Error
+            ? monaco.MarkerSeverity.Error
+            : monaco.MarkerSeverity.Warning,
+      }),
+    );
+
+    monaco.editor.setModelMarkers(model, langId, markers);
+  } else {
+    const parsed = parseSylDocument(text);
+    if (parsed instanceof ParseError) {
+      monaco.editor.setModelMarkers(model, langId, [
+        {
+          startLineNumber: parsed.line,
+          startColumn: parsed.col,
+          endLineNumber: parsed.line,
+          endColumn: parsed.col + 1,
+          message: parsed.message,
+          severity: monaco.MarkerSeverity.Error,
+        },
+      ]);
+      lastCheckResult = null;
+      return;
+    }
+
+    const result = checkSylDocument(emptySylExt, parsed);
+    lastCheckResult = {
+      lang: "syl",
+      checkDiagnostics: result.checkDiagnostics,
+      checkHovers: result.checkHovers,
+      checkDefinitions: result.checkDefinitions,
+      sylResult: result,
+      tflResult: null,
+    };
+
+    const markers: monaco.editor.IMarkerData[] = result.checkDiagnostics.map(
+      (d) => ({
+        startLineNumber: d.diagStart.posLine,
+        startColumn: d.diagStart.posCol,
+        endLineNumber: d.diagEnd.posLine,
+        endColumn: d.diagEnd.posCol,
+        message: d.diagMessage,
+        severity:
+          d.diagSeverity === Severity.Error
+            ? monaco.MarkerSeverity.Error
+            : monaco.MarkerSeverity.Warning,
+      }),
+    );
+
+    monaco.editor.setModelMarkers(model, langId, markers);
   }
-
-  const result = checkDocument(emptyExt, parsed);
-  lastCheckResult = result;
-
-  const markers: monaco.editor.IMarkerData[] = result.checkDiagnostics.map(
-    (d) => ({
-      startLineNumber: d.diagStart.posLine,
-      startColumn: d.diagStart.posCol,
-      endLineNumber: d.diagEnd.posLine,
-      endColumn: d.diagEnd.posCol,
-      message: d.diagMessage,
-      severity:
-        d.diagSeverity === Severity.Error
-          ? monaco.MarkerSeverity.Error
-          : monaco.MarkerSeverity.Warning,
-    }),
-  );
-
-  monaco.editor.setModelMarkers(model, LANG_ID, markers);
 }
 
 let checkTimer: ReturnType<typeof setTimeout> | null = null;
@@ -490,7 +841,7 @@ runCheck();
 
 // -- Hover provider ----------------------------------------------------------
 
-monaco.languages.registerHoverProvider(LANG_ID, {
+const hoverProvider: monaco.languages.HoverProvider = {
   provideHover(_model, position) {
     if (!lastCheckResult) return null;
 
@@ -520,18 +871,23 @@ monaco.languages.registerHoverProvider(LANG_ID, {
     }
     return null;
   },
-});
+};
+
+monaco.languages.registerHoverProvider(SYL_LANG, hoverProvider);
+monaco.languages.registerHoverProvider(TFL_LANG, hoverProvider);
 
 // -- Code action provider (swap premises + hole fills) -----------------------
 
-monaco.languages.registerCodeActionProvider(LANG_ID, {
+const codeActionProvider: monaco.languages.CodeActionProvider = {
   provideCodeActions(model, range) {
-    if (!lastCheckResult) return { actions: [], dispose() {} };
+    if (!lastCheckResult || !lastCheckResult.sylResult)
+      return { actions: [], dispose() {} };
 
+    const sylResult = lastCheckResult.sylResult;
     const actions: monaco.languages.CodeAction[] = [];
 
     // Swap actions
-    for (const swap of lastCheckResult.checkSwaps) {
+    for (const swap of sylResult.checkSwaps) {
       if (!rangeOverlaps(range, swap.swapPrem1Start, swap.swapPrem2End))
         continue;
 
@@ -573,7 +929,7 @@ monaco.languages.registerCodeActionProvider(LANG_ID, {
     }
 
     // Hole fills
-    for (const fill of lastCheckResult.checkHoleFills) {
+    for (const fill of sylResult.checkHoleFills) {
       if (fill.holeFillEdits.length === 0) continue;
 
       const overlaps = fill.holeFillEdits.some((e) =>
@@ -604,7 +960,7 @@ monaco.languages.registerCodeActionProvider(LANG_ID, {
     }
 
     // Reduce to Figure 1
-    for (const ra of lastCheckResult.checkReduces) {
+    for (const ra of sylResult.checkReduces) {
       if (!rangeOverlaps(range, ra.reducePrem1Start, ra.reduceConcEnd))
         continue;
 
@@ -659,11 +1015,57 @@ monaco.languages.registerCodeActionProvider(LANG_ID, {
 
     return { actions, dispose() {} };
   },
-});
+};
+
+// TFL code action provider (hole fills only, no swaps/reduces)
+const tflCodeActionProvider: monaco.languages.CodeActionProvider = {
+  provideCodeActions(model, range) {
+    if (!lastCheckResult || !lastCheckResult.tflResult)
+      return { actions: [], dispose() {} };
+
+    const tflResult = lastCheckResult.tflResult;
+    const actions: monaco.languages.CodeAction[] = [];
+
+    for (const fill of tflResult.checkHoleFills) {
+      if (fill.holeFillEdits.length === 0) continue;
+
+      const overlaps = fill.holeFillEdits.some((e) =>
+        rangeOverlaps(range, e.fillEditStart, e.fillEditEnd),
+      );
+      if (!overlaps) continue;
+
+      const edits: monaco.languages.IWorkspaceTextEdit[] =
+        fill.holeFillEdits.map((e) => ({
+          resource: model.uri,
+          textEdit: {
+            range: new monaco.Range(
+              e.fillEditStart.posLine,
+              e.fillEditStart.posCol,
+              e.fillEditEnd.posLine,
+              e.fillEditEnd.posCol,
+            ),
+            text: e.fillEditText,
+          },
+          versionId: model.getVersionId(),
+        }));
+
+      actions.push({
+        title: fill.holeFillLabel,
+        kind: "quickfix",
+        edit: { edits },
+      });
+    }
+
+    return { actions, dispose() {} };
+  },
+};
+
+monaco.languages.registerCodeActionProvider(SYL_LANG, codeActionProvider);
+monaco.languages.registerCodeActionProvider(TFL_LANG, tflCodeActionProvider);
 
 // -- Go to definition --------------------------------------------------------
 
-monaco.languages.registerDefinitionProvider(LANG_ID, {
+const definitionProvider: monaco.languages.DefinitionProvider = {
   provideDefinition(_model, position) {
     if (!lastCheckResult) return null;
 
@@ -691,7 +1093,10 @@ monaco.languages.registerDefinitionProvider(LANG_ID, {
     }
     return null;
   },
-});
+};
+
+monaco.languages.registerDefinitionProvider(SYL_LANG, definitionProvider);
+monaco.languages.registerDefinitionProvider(TFL_LANG, definitionProvider);
 
 // -- Helpers -----------------------------------------------------------------
 

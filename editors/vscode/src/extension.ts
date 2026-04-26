@@ -9,8 +9,8 @@ import {
 let client: LanguageClient | undefined;
 
 export function activate(context: ExtensionContext): void {
-  const config = workspace.getConfiguration("organon-syl");
-  const serverPath = config.get<string>("serverPath", "organon-syl-lsp");
+  const config = workspace.getConfiguration("organon");
+  const serverPath = config.get<string>("serverPath", "organon-lsp");
 
   // Resolve relative paths against the extension directory.
   const command = path.isAbsolute(serverPath) ? serverPath : serverPath;
@@ -21,12 +21,15 @@ export function activate(context: ExtensionContext): void {
   };
 
   const clientOptions: LanguageClientOptions = {
-    documentSelector: [{ scheme: "file", language: "syl" }],
+    documentSelector: [
+      { scheme: "file", language: "syl" },
+      { scheme: "file", language: "tfl" },
+    ],
   };
 
   client = new LanguageClient(
-    "organon-syl",
-    "Organon Syllogistic",
+    "organon",
+    "Organon",
     serverOptions,
     clientOptions,
   );

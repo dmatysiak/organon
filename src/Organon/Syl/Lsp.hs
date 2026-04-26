@@ -25,7 +25,7 @@ serverDef :: TVar WorkspaceState -> ServerDefinition ()
 serverDef stateVar =
   ServerDefinition
     { defaultConfig = (),
-      configSection = "organon-syl",
+      configSection = "organon",
       parseConfig = \_ _ -> Right (),
       onConfigChange = const (pure ()),
       doInitialize = \env _req -> pure (Right env),
@@ -67,7 +67,7 @@ handlers stateVar =
         case msg of
           TNotificationMessage _ _ (DidCloseTextDocumentParams (TextDocumentIdentifier uri)) ->
             let nuri = toNormalizedUri uri
-             in publishDiagnostics 100 nuri Nothing (Map.singleton (Just "organon-syl") mempty),
+             in publishDiagnostics 100 nuri Nothing (Map.singleton (Just "organon") mempty),
       requestHandler SMethod_TextDocumentHover $ \req responder -> do
         let TRequestMessage _ _ _ (HoverParams (TextDocumentIdentifier uri) pos _) = req
         result <- hoverAt stateVar (toNormalizedUri uri) pos

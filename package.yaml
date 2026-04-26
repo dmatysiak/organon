@@ -1,6 +1,6 @@
-name: organon-syl
+name: organon
 version: 0.1.0.0
-github: "dmatysiak/organon-syl"
+github: "dmatysiak/organon"
 license: BSD-3-Clause
 author: "Daniel A. Matysiak"
 copyright: "2026 Daniel A. Matysiak"
@@ -10,9 +10,9 @@ extra-source-files:
   - CHANGELOG.md
 
 category: Theorem Provers, Logic, Formal Methods
-synopsis: A proof assistant for medieval syllogistic logic.
+synopsis: A proof assistant for syllogistic logic and term functor logic.
 
-description: Please see the README on GitHub at <https://github.com/dmatysiak/organon-syl#readme>
+description: Please see the README on GitHub at <https://github.com/dmatysiak/organon#readme>
 
 language: GHC2021
 
@@ -51,7 +51,7 @@ library:
   source-dirs: src
 
 executables:
-  organon-syl-repl:
+  organon-repl:
     main: Main.hs
     source-dirs: app/repl
     ghc-options:
@@ -59,9 +59,9 @@ executables:
       - -rtsopts
       - -with-rtsopts=-N
     dependencies:
-      - organon-syl
+      - organon
 
-  organon-syl-lsp:
+  organon-lsp:
     main: Main.hs
     source-dirs: app/lsp
     ghc-options:
@@ -69,9 +69,9 @@ executables:
       - -rtsopts
       - -with-rtsopts=-N
     dependencies:
-      - organon-syl
+      - organon
 
-  organon-syl-check:
+  organon-check:
     main: Main.hs
     source-dirs: app/check
     ghc-options:
@@ -79,17 +79,32 @@ executables:
       - -rtsopts
       - -with-rtsopts=-N
     dependencies:
-      - organon-syl
+      - organon
 
 tests:
-  organon-syl-test:
+  organon-test:
     main: Spec.hs
     source-dirs: test
+    other-modules: []
     ghc-options:
       - -threaded
       - -rtsopts
       - -with-rtsopts=-N
     dependencies:
-      - organon-syl
+      - organon
       - hspec
       - text
+
+  organon-tfl-test:
+    main: TflSpec.hs
+    source-dirs: test
+    other-modules: []
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
+    dependencies:
+      - organon
+      - hspec
+      - text
+      - containers

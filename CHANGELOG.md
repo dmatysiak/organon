@@ -1,4 +1,4 @@
-# Changelog for `organon-syl`
+# Changelog for `organon`
 
 All notable changes to this project will be documented in this file.
 

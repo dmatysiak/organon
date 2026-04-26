@@ -1,7 +1,7 @@
 {
-  "name": "organon-syl",
-  "displayName": "Organon Syllogistic",
-  "description": "Syntax highlighting and LSP support for .syl syllogistic proof files",
+  "name": "organon",
+  "displayName": "Organon",
+  "description": "Syntax highlighting and LSP support for .syl and .tfl proof files",
   "version": "0.1.0",
   "publisher": "organon",
   "engines": {
@@ -17,6 +17,12 @@
         "aliases": ["Syllogistic", "syl"],
         "extensions": [".syl"],
         "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "tfl",
+        "aliases": ["Term Functor Logic", "tfl"],
+        "extensions": [".tfl"],
+        "configuration": "./language-configuration.json"
       }
     ],
     "grammars": [
@@ -24,26 +30,38 @@
         "language": "syl",
         "scopeName": "source.syl",
         "path": "./syntaxes/syl.tmLanguage.json"
+      },
+      {
+        "language": "tfl",
+        "scopeName": "source.tfl",
+        "path": "./syntaxes/tfl.tmLanguage.json"
       }
     ],
     "snippets": [
       {
         "language": "syl",
         "path": "./snippets/syl.json"
+      },
+      {
+        "language": "tfl",
+        "path": "./snippets/tfl.json"
       }
     ],
     "configuration": {
-      "title": "Organon Syllogistic",
+      "title": "Organon",
       "properties": {
-        "organon-syl.serverPath": {
+        "organon.serverPath": {
           "type": "string",
-          "default": "organon-syl-lsp",
-          "description": "Path to the organon-syl-lsp binary. If not absolute, looked up on PATH."
+          "default": "organon-lsp",
+          "description": "Path to the organon-lsp binary. If not absolute, looked up on PATH."
         }
       }
     },
     "configurationDefaults": {
       "[syl]": {
+        "editor.formatOnSave": true
+      },
+      "[tfl]": {
         "editor.formatOnSave": true
       }
     }

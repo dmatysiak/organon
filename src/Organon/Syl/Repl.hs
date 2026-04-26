@@ -22,13 +22,13 @@ import System.Console.Haskeline
 repl :: Text -> IO ()
 repl ver = do
   tradRef <- newIORef Traditional
-  TIO.putStrLn $ "organon-syl " <> ver <> " — a proof assistant for syllogistic logic"
+  TIO.putStrLn $ "organon/syl " <> ver <> " — syllogistic logic"
   TIO.putStrLn "Type :help for available commands.\n"
   runInputT defaultSettings (loop tradRef)
 
 loop :: IORef Tradition -> InputT IO ()
 loop tradRef = do
-  minput <- getInputLine "organon-syl> "
+  minput <- getInputLine "organon/syl> "
   case minput of
     Nothing -> pure ()
     Just input ->

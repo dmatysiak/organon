@@ -1,0 +1,48 @@
+{
+  "Proof block": {
+    "prefix": "proof",
+    "body": [
+      "proof ${1:Name}",
+      "  ${2:−S +M}",
+      "  ${3:−M +P}",
+      "  ∴ ${4:−S +P}",
+      ""
+    ],
+    "description": "Insert a TFL proof block with two premises and a conclusion"
+  },
+  "Therefore": {
+    "prefix": "therefore",
+    "body": "∴",
+    "description": "Insert the ∴ (therefore) symbol"
+  },
+  "Therefore (abbreviation)": {
+    "prefix": "\\tf",
+    "body": "∴",
+    "description": "Insert the ∴ (therefore) symbol"
+  },
+  "Open namespace": {
+    "prefix": "open",
+    "body": "open ${1:Namespace}",
+    "description": "Import proofs from another .tfl file"
+  },
+  "Universal affirmative": {
+    "prefix": "every",
+    "body": "−${1:S} +${2:P}",
+    "description": "every S is P → −S +P"
+  },
+  "Universal negative": {
+    "prefix": "no",
+    "body": "−${1:S} −${2:P}",
+    "description": "no S is P → −S −P"
+  },
+  "Particular affirmative": {
+    "prefix": "someis",
+    "body": "+${1:S} +${2:P}",
+    "description": "some S is P → +S +P"
+  },
+  "Particular negative": {
+    "prefix": "someisnot",
+    "body": "+${1:S} −${2:P}",
+    "description": "some S is not P → +S −P"
+  }
+}

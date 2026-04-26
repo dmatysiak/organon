@@ -1,0 +1,79 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Term Functor Logic",
+  "scopeName": "source.tfl",
+  "fileTypes": ["tfl"],
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#open-directive" },
+    { "include": "#proof-header" },
+    { "include": "#conclusion-marker" },
+    { "include": "#qualified-reference" },
+    { "include": "#reference" },
+    { "include": "#positions" },
+    { "include": "#sign" },
+    { "include": "#quantifier" },
+    { "include": "#copula" },
+    { "include": "#complement" }
+  ],
+  "repository": {
+    "comment": {
+      "match": "--.*$",
+      "name": "comment.line.double-dash.tfl"
+    },
+    "open-directive": {
+      "match": "^(open)\\s+(\\S+)",
+      "captures": {
+        "1": { "name": "keyword.control.open.tfl" },
+        "2": { "name": "entity.name.namespace.tfl" }
+      }
+    },
+    "proof-header": {
+      "match": "^(proof)\\s+(\\S+)",
+      "captures": {
+        "1": { "name": "keyword.control.proof.tfl" },
+        "2": { "name": "entity.name.function.proof.tfl" }
+      }
+    },
+    "conclusion-marker": {
+      "match": "∴|\\btherefore\\b",
+      "name": "keyword.operator.conclusion.tfl"
+    },
+    "qualified-reference": {
+      "match": "(@)([A-Za-z_][A-Za-z0-9_-]*)\\.([A-Za-z_][A-Za-z0-9_-]*)(?:\\s+(conv|per-accidens|obv|contra)\\b)?",
+      "captures": {
+        "1": { "name": "punctuation.definition.reference.tfl" },
+        "2": { "name": "entity.name.namespace.tfl" },
+        "3": { "name": "variable.other.reference.tfl" },
+        "4": { "name": "keyword.other.modifier.tfl" }
+      }
+    },
+    "reference": {
+      "match": "(@[A-Za-z_][A-Za-z0-9_-]*)(?:\\s+(conv|per-accidens|obv|contra)\\b)?",
+      "captures": {
+        "1": { "name": "variable.other.reference.tfl" },
+        "2": { "name": "keyword.other.modifier.tfl" }
+      }
+    },
+    "positions": {
+      "match": "<\\d+(?:,\\d+)*>",
+      "name": "constant.numeric.positions.tfl"
+    },
+    "sign": {
+      "match": "[+\\-−*](?=[A-Za-z]|\\s+[A-Za-z])",
+      "name": "keyword.operator.sign.tfl"
+    },
+    "quantifier": {
+      "match": "(?i)\\b(every|no|some)\\b",
+      "name": "keyword.other.quantifier.tfl"
+    },
+    "copula": {
+      "match": "\\b(is\\s+not|is)\\b",
+      "name": "keyword.other.copula.tfl"
+    },
+    "complement": {
+      "match": "\\bnon-",
+      "name": "keyword.other.complement.tfl"
+    }
+  }
+}

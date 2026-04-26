@@ -15,24 +15,13 @@ where
 
 import Data.Text (Text)
 import qualified Data.Text as T
+import Organon.Common.Types (Located (..), SrcPos (..))
 import Organon.Syl.Hole (PropTypeH (..), PropositionH (..), TermH (..))
 import Organon.Syl.Parser (Parser, isNameChar, lexeme, lineComment, propositionHP, symbol)
 import Organon.Syl.Types
 import Text.Megaparsec
 import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
-
--- | Source position (1-indexed line and column).
-data SrcPos = SrcPos {posLine :: Int, posCol :: Int}
-  deriving stock (Eq, Show)
-
--- | A value annotated with a source span.
-data Located a = Located
-  { locStart :: SrcPos,
-    locEnd :: SrcPos,
-    locValue :: a
-  }
-  deriving stock (Eq, Show)
 
 -- | A modifier applied to a reference premise.
 data RefModifier

@@ -10,6 +10,9 @@ import Language.LSP.Protocol.Types
 import Language.LSP.Server
 import Language.LSP.VFS (virtualFileText)
 import Organon.Syl.Document (parseDocument)
+import qualified Organon.Tfl.Document as TflDoc
+import qualified Organon.Tfl.Format as TflFormat
+import Organon.Syl.Lsp.State (FileLang (..), fileLang)
 
 -- | Format a document: normalize whitespace, canonicalize conclusion markers.
 -- Only formats if the document parses successfully.
@@ -20,22 +23,35 @@ formatDoc nuri = do
     Nothing -> pure (InR Null)
     Just vf -> do
       let txt = virtualFileText vf
-      case parseDocument txt of
-        Left _ -> pure (InR Null)
-        Right _ ->
-          let formatted = formatText txt
-           in if formatted == txt
-                then pure (InL [])
-                else
-                  let lns = T.lines txt
-                      totalLines = length lns
-                      lastLine = maybe T.empty snd (unsnoc lns)
-                      lastLineLen = T.length lastLine
-                      endPos
-                        | T.null lastLine = Position (fromIntegral (totalLines - 1)) 0
-                        | otherwise = Position (fromIntegral (totalLines - 1)) (fromIntegral lastLineLen)
-                      range = Range (Position 0 0) endPos
-                   in pure (InL [TextEdit range formatted])
+      case fileLang nuri of
+        SylFile -> formatSyl txt
+        TflFile -> formatTfl txt
+
+formatSyl :: T.Text -> LspM () ([TextEdit] |? Null)
+formatSyl txt =
+  case parseDocument txt of
+    Left _ -> pure (InR Null)
+    Right _ -> applyFormatted txt (formatText txt)
+
+formatTfl :: T.Text -> LspM () ([TextEdit] |? Null)
+formatTfl txt =
+  case TflDoc.parseDocument txt of
+    Left _ -> pure (InR Null)
+    Right _ -> applyFormatted txt (TflFormat.formatText txt)
+
+applyFormatted :: T.Text -> T.Text -> LspM () ([TextEdit] |? Null)
+applyFormatted original formatted
+  | formatted == original = pure (InL [])
+  | otherwise =
+      let lns = T.lines original
+          totalLines = length lns
+          lastLine = maybe T.empty snd (unsnoc lns)
+          lastLineLen = T.length lastLine
+          endPos
+            | T.null lastLine = Position (fromIntegral (totalLines - 1)) 0
+            | otherwise = Position (fromIntegral (totalLines - 1)) (fromIntegral lastLineLen)
+          range = Range (Position 0 0) endPos
+       in pure (InL [TextEdit range formatted])
 
 -- | Text-level formatting that preserves comments.
 formatText :: T.Text -> T.Text

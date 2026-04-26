@@ -4,13 +4,13 @@ cabal-version: 2.2
 --
 -- see: https://github.com/sol/hpack
 
-name:           organon-syl
+name:           organon
 version:        0.1.0.0
-synopsis:       A proof assistant for medieval syllogistic logic.
-description:    Please see the README on GitHub at <https://github.com/dmatysiak/organon-syl#readme>
+synopsis:       A proof assistant for syllogistic logic and term functor logic.
+description:    Please see the README on GitHub at <https://github.com/dmatysiak/organon#readme>
 category:       Theorem Provers, Logic, Formal Methods
-homepage:       https://github.com/dmatysiak/organon-syl#readme
-bug-reports:    https://github.com/dmatysiak/organon-syl/issues
+homepage:       https://github.com/dmatysiak/organon#readme
+bug-reports:    https://github.com/dmatysiak/organon/issues
 author:         Daniel A. Matysiak
 maintainer:     Daniel A. Matysiak
 copyright:      2026 Daniel A. Matysiak
@@ -23,10 +23,11 @@ extra-source-files:
 
 source-repository head
   type: git
-  location: https://github.com/dmatysiak/organon-syl
+  location: https://github.com/dmatysiak/organon
 
 library
   exposed-modules:
+      Organon.Common.Types
       Organon.Syl.Check
       Organon.Syl.Document
       Organon.Syl.FileUtil
@@ -44,10 +45,19 @@ library
       Organon.Syl.Tradition
       Organon.Syl.Types
       Organon.Syl.Validity
+      Organon.Tfl.Check
+      Organon.Tfl.Document
+      Organon.Tfl.Format
+      Organon.Tfl.Hole
+      Organon.Tfl.Parser
+      Organon.Tfl.Pretty
+      Organon.Tfl.Repl
+      Organon.Tfl.Types
+      Organon.Tfl.Validity
   other-modules:
-      Paths_organon_syl
+      Paths_organon
   autogen-modules:
-      Paths_organon_syl
+      Paths_organon
   hs-source-dirs:
       src
   default-extensions:
@@ -71,12 +81,12 @@ library
     , text
   default-language: GHC2021
 
-executable organon-syl-check
+executable organon-check
   main-is: Main.hs
   other-modules:
-      Paths_organon_syl
+      Paths_organon
   autogen-modules:
-      Paths_organon_syl
+      Paths_organon
   hs-source-dirs:
       app/check
   default-extensions:
@@ -95,18 +105,18 @@ executable organon-syl-check
     , lsp
     , lsp-types
     , megaparsec
-    , organon-syl
+    , organon
     , parser-combinators
     , stm
     , text
   default-language: GHC2021
 
-executable organon-syl-lsp
+executable organon-lsp
   main-is: Main.hs
   other-modules:
-      Paths_organon_syl
+      Paths_organon
   autogen-modules:
-      Paths_organon_syl
+      Paths_organon
   hs-source-dirs:
       app/lsp
   default-extensions:
@@ -125,18 +135,18 @@ executable organon-syl-lsp
     , lsp
     , lsp-types
     , megaparsec
-    , organon-syl
+    , organon
     , parser-combinators
     , stm
     , text
   default-language: GHC2021
 
-executable organon-syl-repl
+executable organon-repl
   main-is: Main.hs
   other-modules:
-      Paths_organon_syl
+      Paths_organon
   autogen-modules:
-      Paths_organon_syl
+      Paths_organon
   hs-source-dirs:
       app/repl
   default-extensions:
@@ -155,19 +165,15 @@ executable organon-syl-repl
     , lsp
     , lsp-types
     , megaparsec
-    , organon-syl
+    , organon
     , parser-combinators
     , stm
     , text
   default-language: GHC2021
 
-test-suite organon-syl-test
+test-suite organon-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
-  other-modules:
-      Paths_organon_syl
-  autogen-modules:
-      Paths_organon_syl
   hs-source-dirs:
       test
   default-extensions:
@@ -187,7 +193,35 @@ test-suite organon-syl-test
     , lsp
     , lsp-types
     , megaparsec
-    , organon-syl
+    , organon
+    , parser-combinators
+    , stm
+    , text
+  default-language: GHC2021
+
+test-suite organon-tfl-test
+  type: exitcode-stdio-1.0
+  main-is: TflSpec.hs
+  hs-source-dirs:
+      test
+  default-extensions:
+      DerivingStrategies
+      DuplicateRecordFields
+      OverloadedStrings
+      StrictData
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , co-log-core
+    , containers
+    , directory
+    , filepath
+    , haskeline
+    , hspec
+    , lsp
+    , lsp-types
+    , megaparsec
+    , organon
     , parser-combinators
     , stm
     , text

@@ -1,4 +1,4 @@
-# organon-syl-web
+# organon-web
 
 Browser-based proof assistant for medieval syllogistic logic. This is a
 client-side-only web app — no server required. All parsing, validation
