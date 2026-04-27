@@ -50,9 +50,9 @@ prettyWildSign (Fixed s) = prettySign s
 -- @+Lover\<1,2\>@.
 prettySignedTerm :: SignedTerm -> Text
 prettySignedTerm (SignedTerm ws (Atomic t) ps) =
-  prettyWildSign ws <> prettyTerm t <> prettyPositions ps
+  prettyWildSign ws <> " " <> prettyTerm t <> prettyPositions ps
 prettySignedTerm (SignedTerm ws (Compound sts) ps) =
-  prettyWildSign ws <> "(" <> T.intercalate " + " (map prettyCompoundElement sts) <> ")" <> prettyPositions ps
+  prettyWildSign ws <> " (" <> T.intercalate " + " (map prettyCompoundElement sts) <> ")" <> prettyPositions ps
 
 -- | Render a single element inside a compound group (without its sign prefix).
 prettyCompoundElement :: SignedTerm -> Text

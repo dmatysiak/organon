@@ -198,14 +198,14 @@ uses signed terms with algebraic cancellation to determine validity.
 
 ### Notation
 
-Each term carries a sign: `+` (particular/affirmative) or `−` (universal/negative).
+Each term carries a sign: `+` (particular/affirmative) or `-` (universal/negative).
 
-| English         | Algebraic |
-| --------------- | --------- |
-| every S is P    | −S +P     |
-| no S is P       | −S −P     |
-| some S is P     | +S +P     |
-| some S is not P | +S −P     |
+| English         | Algebraic  |
+| --------------- | ---------- |
+| every S is P    | `- S + P`  |
+| no S is P       | `- S - P`  |
+| some S is P     | `+ S + P`  |
+| some S is not P | `+ S - P`  |
 
 A wildcard sign `*` marks a term whose quantity is unspecified (used for
 holes and complementation-indifferent positions).
@@ -217,10 +217,10 @@ appears with opposite signs across premises — and the remaining
 uncancelled terms match the conclusion.
 
 ```
-−S +M   −M +P   ∴ −S +P
+- S + M   - M + P   ∴ - S + P
 ```
 
-Here `+M` and `−M` cancel, leaving `−S +P`.
+Here `+ M` and `- M` cancel, leaving `- S + P`.
 
 ### Sorites
 
@@ -228,7 +228,7 @@ TFL naturally handles multi-premise chains (sorites) that would require
 separate syllogisms in traditional logic:
 
 ```
-−A +B   −B +C   −C +D   ∴ −A +D
+- A + B   - B + C   - C + D   ∴ - A + D
 ```
 
 ### Relational terms
@@ -236,7 +236,7 @@ separate syllogisms in traditional logic:
 Terms can carry positional subscripts for relational reasoning:
 
 ```
-−Boy<1> +Love<1,2> +Girl<2>
+- Boy<1> + Love<1,2> + Girl<2>
 ```
 
 This reads: every Boy is a Lover-of some Girl. The positions bind
@@ -254,7 +254,7 @@ rel Love "Lover-of" "Loved-by"
 `non-` prefixes a complemented term:
 
 ```
-−S +non-P
+- S + non-P
 ```
 
 In English: "every S is non-P".
@@ -269,9 +269,9 @@ open Basics
 rel Love "Lover-of" "Loved-by"
 
 proof Barbara
-  −M +P
-  −S +M
-  ∴ −S +P
+  - M + P
+  - S + M
+  ∴ - S + P
 
 -- English syntax works too
 proof BarbaraEng
@@ -282,14 +282,14 @@ proof BarbaraEng
 -- reference a prior conclusion as a premise
 proof Chain
   @Barbara
-  −P +Q
-  ∴ −S +Q
+  - P + Q
+  ∴ - S + Q
 
 -- reference modifiers: conv, per-accidens, obv, contra
 proof Converted
   @Barbara conv
-  −P +Q
-  ∴ −P +Q
+  - P + Q
+  ∴ - P + Q
 ```
 
 ### TFL reference modifiers
@@ -307,14 +307,14 @@ Use `?` for unknown terms, signs or entire statements:
 
 ```
 proof FindConclusion
-  −M +P
-  −S +M
+  - M + P
+  - S + M
   ∴ ?
 
 proof FindPremise
   ?
-  −S +M
-  ∴ −S +P
+  - S + M
+  ∴ - S + P
 ```
 
 The LSP and REPL solve holes by computing valid cancellations.
@@ -327,15 +327,14 @@ stack exec organon-repl tfl
 
 Commands:
 
-| Command               | Description                                  |
-| --------------------- | -------------------------------------------- |
-| `−S +M; −M +P; −S +P` | validate an inference (default)              |
-| `:validate <inf>`     | check cancellation validity                  |
-| `:prove <inf>`        | validate and show which terms cancel         |
-| `:solve <premises>`   | compute valid conclusion (use `?` for holes) |
-| `:tfl`                | set display to algebraic notation            |
-| `:english`            | set display to regimented English            |
-| `:help`               | show available commands                      |
+| Command                    | Description                                  |
+| -------------------------- | -------------------------------------------- |
+| `- S + M; - M + P; - S + P` | validate an inference (default)              |
+| `:validate <inf>`          | check cancellation validity                  |
+| `:prove <inf>`             | validate and show which terms cancel         |
+| `:solve <premises>`        | compute valid conclusion (use `?` for holes) |
+| `:output tfl\|english`     | set display mode                             |
+| `:help`                    | show available commands                      |
 
 ### TFL LSP features
 

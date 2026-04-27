@@ -208,6 +208,6 @@ prettySignedTermBrief st =
    in case termExpr st of
         Atomic t ->
           let comp = if complemented t then "non-" else ""
-           in signStr <> comp <> termName t <> posStr
+           in signStr <> " " <> comp <> termName t <> posStr
         Compound sts ->
-          signStr <> "(" <> T.intercalate " + " (map prettySignedTermBrief sts) <> ")" <> posStr
+          signStr <> " (" <> T.intercalate " + " (map prettySignedTermBrief sts) <> ")" <> posStr

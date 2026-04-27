@@ -239,7 +239,7 @@ function prettySignedTermBrief(st: SignedTerm): string {
     st.positions.length === 0 ? "" : "<" + st.positions.join(",") + ">";
   if (st.termExpr.tag === "Atomic") {
     const comp = st.termExpr.term.complemented ? "non-" : "";
-    return signStr + comp + st.termExpr.term.termName + posStr;
+    return signStr + " " + comp + st.termExpr.term.termName + posStr;
   }
-  return signStr + "(...)" + posStr;
+  return signStr + " (...)" + posStr;
 }

@@ -119,7 +119,7 @@ function handleHelp(): OutputLine[] {
       info("  :help                   Show this help"),
       info(""),
       info("Inference format (semicolons separate premises from conclusion):"),
-      info("  -S +M; -M +P; -S +P"),
+      info("  - S + M; - M + P; - S + P"),
       info("  every S is M; every M is P; every S is P"),
       info(""),
       info("Shortcuts: :v, :o, :tr, :l, :h"),

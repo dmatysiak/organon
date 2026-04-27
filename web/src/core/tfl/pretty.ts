@@ -38,6 +38,7 @@ export function prettySignedTerm(st: SignedTerm): string {
   if (st.termExpr.tag === "Atomic") {
     return (
       prettyWildSign(st.sign) +
+      " " +
       prettyTerm(st.termExpr.term) +
       prettyPositions(st.positions)
     );
@@ -45,7 +46,7 @@ export function prettySignedTerm(st: SignedTerm): string {
   // Compound
   return (
     prettyWildSign(st.sign) +
-    "(" +
+    " (" +
     st.termExpr.elements.map(prettyCompoundElement).join(" + ") +
     ")" +
     prettyPositions(st.positions)
