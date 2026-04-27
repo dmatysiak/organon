@@ -24,9 +24,13 @@ import {
 // TFL imports
 import {
   parseInference as parseTflInference,
+  parseStatement as parseTflStatement,
   ParseError as TflParseError,
 } from "./core/tfl/parser";
-import { validate as tflValidate } from "./core/tfl/validity";
+import {
+  validate as tflValidate,
+  cancellation as tflCancellation,
+} from "./core/tfl/validity";
 import type { Inference as TflInference } from "./core/tfl/types";
 import type { ValidationResult as TflValidationResult } from "./core/tfl/validity";
 import {
@@ -112,6 +116,8 @@ function handleHelp(): OutputLine[] {
       info(
         "  :validate <inference>   Check cancellation validity (default for bare input)",
       ),
+      info("  :prove <inference>      Validate and show cancellation details"),
+      info("  :solve <premises>       Compute conclusion from premises"),
       info("  :output tfl|english|visual  Set display mode"),
       info("  :tree [<name>]          Show term tree from buffer proofs"),
       info("  :lang syl|tfl           Switch language"),
@@ -122,7 +128,7 @@ function handleHelp(): OutputLine[] {
       info("  - S + M; - M + P; - S + P"),
       info("  every S is M; every M is P; every S is P"),
       info(""),
-      info("Shortcuts: :v, :o, :tr, :l, :h"),
+      info("Shortcuts: :v, :p, :s, :o, :tr, :l, :h"),
     ];
   }
   return [
@@ -342,6 +348,75 @@ function handleTflValidate(input: string): OutputLine[] {
     .map((l) => (res.tag === "Valid" ? result(l) : err(l)));
 }
 
+function handleTflProve(input: string): OutputLine[] {
+  const parsed = parseTflInference(input);
+  if (parsed instanceof TflParseError) {
+    return [err(`Parse error: ${parsed.message}`)];
+  }
+  const res = tflValidate(parsed);
+  lastTflInference = parsed;
+  lastTflResult = res;
+
+  if (tflOutputMode === "visual") {
+    const tree = buildTree(parsed, res);
+    const el = renderTreeInteractive(tree);
+    return [{ element: el, cls: "dom" as const }];
+  }
+
+  const renderStmt =
+    tflOutputMode === "english"
+      ? (s: TflStatement) => prettyTflStatementEnglish(new Map(), s)
+      : prettyTflStatement;
+  const renderInf =
+    tflOutputMode === "english"
+      ? (i: TflInference) => prettyTflInferenceEnglish(new Map(), i)
+      : prettyTflInference;
+
+  if (res.tag === "Valid") {
+    return [
+      result("Valid"),
+      result(renderInf(parsed)),
+      info(""),
+      ...prettyCancellation(res.cancellation).split("\n").map(info),
+    ];
+  }
+  return [
+    err("Invalid"),
+    ...prettyCancellation(res.cancellation).split("\n").map(info),
+    info(""),
+    ...res.errors.map((e) => err("  " + e)),
+  ];
+}
+
+function handleTflSolve(input: string): OutputLine[] {
+  const parts = input.split(";").map((s) => s.trim());
+  const stmts: TflStatement[] = [];
+  for (const part of parts) {
+    const parsed = parseTflStatement(part);
+    if (parsed instanceof TflParseError) {
+      return [err(`Parse error: ${parsed.message}`)];
+    }
+    stmts.push(parsed);
+  }
+  if (stmts.length < 2) {
+    return [err("Need at least 2 premises to solve.")];
+  }
+  const cancel = tflCancellation(stmts);
+  const uncancelledSTs = cancel.uncancelled.map(([, st]) => st);
+  const solved: TflStatement = { terms: uncancelledSTs };
+
+  const renderStmt =
+    tflOutputMode === "english"
+      ? (s: TflStatement) => prettyTflStatementEnglish(new Map(), s)
+      : prettyTflStatement;
+
+  return [
+    ...prettyCancellation(cancel).split("\n").map(info),
+    info(""),
+    result("Conclusion: " + renderStmt(solved)),
+  ];
+}
+
 function handleOutput(args: string): OutputLine[] {
   switch (args.toLowerCase()) {
     case "tfl":
@@ -454,6 +529,14 @@ function dispatch(raw: string, ui: ReplUI): void {
       case ":v":
         lines = handleTflValidate(args);
         break;
+      case ":prove":
+      case ":p":
+        lines = handleTflProve(args);
+        break;
+      case ":solve":
+      case ":s":
+        lines = handleTflSolve(args);
+        break;
       case ":output":
       case ":o":
         lines = handleOutput(args);
@@ -467,6 +550,8 @@ function dispatch(raw: string, ui: ReplUI): void {
           lines = [
             err(`Unknown command: ${cmd}. Type :help for available commands.`),
           ];
+        } else if (input.includes("?")) {
+          lines = handleTflSolve(input);
         } else {
           lines = handleTflValidate(input);
         }
