@@ -842,12 +842,13 @@ checkSpec = describe "Tfl.Check" $ do
           checkHoleFills result `shouldSatisfy` (not . null)
         Left err -> expectationFailure (T.unpack err)
 
-    it "warns when premises have holes" $
+    it "solves a single whole-premise hole" $
       case parseDocument "proof A\n?\n-S +M\n∴ -S +P\n" of
         Right doc -> do
           let result = checkDocument (ExternalContext Map.empty) doc
           checkDiagnostics result `shouldSatisfy`
-            any (\d -> "holes" `T.isInfixOf` diagMessage d)
+            any (\d -> "Solved premise" `T.isInfixOf` diagMessage d)
+          checkHoleFills result `shouldSatisfy` (not . null)
         Left err -> expectationFailure (T.unpack err)
 
   describe "Definition items" $ do

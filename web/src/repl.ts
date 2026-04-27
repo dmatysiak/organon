@@ -40,6 +40,7 @@ import {
 import { buildTree, renderTreeInteractive } from "./core/tfl/tree";
 import { buildTermTree, renderTermTree } from "./core/tfl/termtree";
 import type { Statement as TflStatement } from "./core/tfl/types";
+import type { CheckedProof as TflCheckedProof } from "./core/tfl/check";
 
 type Lang = "syl" | "tfl";
 type TflOutputMode = "tfl" | "english" | "visual";
@@ -51,8 +52,7 @@ let lang: Lang = "syl";
 let tflOutputMode: TflOutputMode = "tfl";
 let lastTflInference: TflInference | null = null;
 let lastTflResult: TflValidationResult | null = null;
-let tflProofs: { name: string; conclusion: TflStatement }[] = [];
-let tflProofCounter = 0;
+let replUI: ReplUI | null = null;
 
 // -- Output rendering -------------------------------------------------------
 
@@ -65,6 +65,8 @@ export type ReplUI = {
   outputEl: HTMLElement;
   inputEl: HTMLInputElement;
   langToggle: HTMLButtonElement;
+  getBufferProofs: () => TflCheckedProof[];
+  getBufferLang: () => Lang;
 };
 
 function appendLines(ui: ReplUI, lines: OutputLine[]): void {
@@ -111,9 +113,7 @@ function handleHelp(): OutputLine[] {
         "  :validate <inference>   Check cancellation validity (default for bare input)",
       ),
       info("  :output tfl|english|visual  Set display mode"),
-      info(
-        "  :tree [<name>]          Show term tree (all proofs or named proof)",
-      ),
+      info("  :tree [<name>]          Show term tree from buffer proofs"),
       info("  :lang syl|tfl           Switch language"),
       info("  :clear                  Clear output"),
       info("  :help                   Show this help"),
@@ -314,15 +314,6 @@ function handleTflValidate(input: string): OutputLine[] {
   lastTflInference = parsed;
   lastTflResult = res;
 
-  // Track valid proofs for term tree
-  if (res.tag === "Valid") {
-    tflProofCounter++;
-    tflProofs.push({
-      name: `proof-${tflProofCounter}`,
-      conclusion: parsed.conclusion,
-    });
-  }
-
   if (tflOutputMode === "visual") {
     const tree = buildTree(parsed, res);
     const el = renderTreeInteractive(tree);
@@ -367,13 +358,18 @@ function handleOutput(args: string): OutputLine[] {
   }
 }
 
-function handleTermTree(args: string): OutputLine[] {
+function handleTermTree(args: string, ui: ReplUI): OutputLine[] {
+  const bufferProofs = ui.getBufferProofs();
+  const proofs = bufferProofs.map((p) => ({
+    name: p.checkedName,
+    conclusion: p.checkedInference.conclusion,
+  }));
+
   if (args.trim().length > 0) {
-    // :tree PROOF-NAME — show tree for a single named proof
     const name = args.trim();
-    const match = tflProofs.find((p) => p.name === name);
+    const match = proofs.find((p) => p.name === name);
     if (!match) {
-      return [err(`No proof named "${name}". Use :tree to see all.`)];
+      return [err(`No proof named "${name}" in buffer.`)];
     }
     const tree = buildTermTree([match]);
     if (tree.terms.length === 0) {
@@ -383,11 +379,10 @@ function handleTermTree(args: string): OutputLine[] {
     return [{ element: el, cls: "dom" as const }];
   }
 
-  // :tree — show tree from all validated proofs in session
-  if (tflProofs.length === 0) {
-    return [err("No validated proofs in session. Run some inferences first.")];
+  if (proofs.length === 0) {
+    return [err("No valid proofs in the current buffer.")];
   }
-  const tree = buildTermTree(tflProofs);
+  const tree = buildTermTree(proofs);
   if (tree.terms.length === 0) {
     return [info("No term relations found across proofs.")];
   }
@@ -465,7 +460,7 @@ function dispatch(raw: string, ui: ReplUI): void {
         break;
       case ":tree":
       case ":tr":
-        lines = handleTermTree(args);
+        lines = handleTermTree(args, ui);
         break;
       default:
         if (cmd.startsWith(":")) {
@@ -527,6 +522,12 @@ let historyIdx = -1;
 // -- Init --------------------------------------------------------------------
 
 export function initRepl(ui: ReplUI): void {
+  replUI = ui;
+
+  // Sync initial language with buffer
+  lang = ui.getBufferLang();
+  updatePrompt(ui);
+
   // Welcome message
   appendLines(ui, [
     info("organon — type :help for commands, :lang syl|tfl to switch"),
@@ -568,4 +569,14 @@ export function initRepl(ui: ReplUI): void {
     const lines = handleLang(next, ui);
     appendLines(ui, lines);
   });
+}
+
+/** Called by main.ts when the active buffer changes. */
+export function syncReplLang(): void {
+  if (!replUI) return;
+  const bufLang = replUI.getBufferLang();
+  if (bufLang !== lang) {
+    lang = bufLang;
+    updatePrompt(replUI);
+  }
 }

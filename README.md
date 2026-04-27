@@ -200,12 +200,12 @@ uses signed terms with algebraic cancellation to determine validity.
 
 Each term carries a sign: `+` (particular/affirmative) or `-` (universal/negative).
 
-| English         | Algebraic  |
-| --------------- | ---------- |
-| every S is P    | `- S + P`  |
-| no S is P       | `- S - P`  |
-| some S is P     | `+ S + P`  |
-| some S is not P | `+ S - P`  |
+| English         | Algebraic |
+| --------------- | --------- |
+| every S is P    | `- S + P` |
+| no S is P       | `- S - P` |
+| some S is P     | `+ S + P` |
+| some S is not P | `+ S - P` |
 
 A wildcard sign `*` marks a term whose quantity is unspecified (used for
 holes and complementation-indifferent positions).
@@ -327,14 +327,14 @@ stack exec organon-repl tfl
 
 Commands:
 
-| Command                    | Description                                  |
-| -------------------------- | -------------------------------------------- |
+| Command                     | Description                                  |
+| --------------------------- | -------------------------------------------- |
 | `- S + M; - M + P; - S + P` | validate an inference (default)              |
-| `:validate <inf>`          | check cancellation validity                  |
-| `:prove <inf>`             | validate and show which terms cancel         |
-| `:solve <premises>`        | compute valid conclusion (use `?` for holes) |
-| `:output tfl\|english`     | set display mode                             |
-| `:help`                    | show available commands                      |
+| `:validate <inf>`           | check cancellation validity                  |
+| `:prove <inf>`              | validate and show which terms cancel         |
+| `:solve <premises>`         | compute valid conclusion (use `?` for holes) |
+| `:output tfl\|english`      | set display mode                             |
+| `:help`                     | show available commands                      |
 
 ### TFL LSP features
 

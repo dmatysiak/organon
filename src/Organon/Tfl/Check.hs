@@ -253,19 +253,112 @@ checkProofBlock ext opens ctx block =
                       ("Solved conclusion: " <> prettyStatement solvedConcl)
                in Left ([diag], [fill])
             _ ->
-              -- Premises have holes: can't solve yet.
-              let s = locStart (proofName block)
-                  e = locEnd (proofName block)
-               in Left
-                    ( [ Diagnostic s e Warning
-                          "Cannot validate: premises contain holes"
-                      ],
-                      []
-                    )
+              -- Check for exactly one whole-statement hole with concrete conclusion.
+              case fromConcreteH conclH of
+                Just concl ->
+                  let (holes, concretes) = partitionHoles (zip resolved (proofPremises block))
+                   in case holes of
+                        [(_, holeLoc)] | length concretes == length resolved - 1 ->
+                          case solvePremiseHole (map fst concretes) concl of
+                            Just solved ->
+                              let s = locStart holeLoc
+                                  e = locEnd holeLoc
+                                  fill =
+                                    HoleFill
+                                      { holeFillEdits = [HoleFillEdit s e (prettyStatement solved)],
+                                        holeFillLabel = prettyStatement solved
+                                      }
+                                  diag = Diagnostic s e Warning ("Solved premise: " <> prettyStatement solved)
+                               in Left ([diag], [fill])
+                            Nothing -> cantValidate
+                        _ -> cantValidate
+                Nothing -> cantValidate
+              where
+                cantValidate =
+                  let s = locStart (proofName block)
+                      e = locEnd (proofName block)
+                   in Left
+                        ( [ Diagnostic s e Warning
+                              "Cannot validate: premises contain holes"
+                          ],
+                          []
+                        )
 
 -- | Try to extract all concrete statements from resolved premises.
 allConcrete :: [StatementH] -> Maybe [Statement]
 allConcrete = traverse fromConcreteH
+
+-- | Partition resolved premises into whole-statement holes and concrete
+-- statements, keeping their Located premise info for source positions.
+partitionHoles ::
+  [(StatementH, Located Premise)] ->
+  ([(StatementH, Located Premise)], [(Statement, Located Premise)])
+partitionHoles = foldr go ([], [])
+  where
+    go (WholeStmtH, loc) (hs, cs) = ((WholeStmtH, loc) : hs, cs)
+    go (sh, loc) (hs, cs) = case fromConcreteH sh of
+      Just s  -> (hs, (s, loc) : cs)
+      Nothing -> ((sh, loc) : hs, cs)
+
+-- | Solve for a missing premise given concrete known premises and a
+-- concrete conclusion.
+solvePremiseHole :: [Statement] -> Statement -> Maybe Statement
+solvePremiseHole [] concl = Just concl
+solvePremiseHole known concl =
+  let cancel = cancellation known
+      unc = map snd (uncancelled cancel)
+      conclTs = terms concl
+      -- Match uncancelled terms against conclusion terms
+      (usedU, usedC) = matchTerms unc conclTs
+      -- Uncancelled not in conclusion -> missing premise must cancel them
+      toCancel =
+        [ case sign st of
+            Fixed s -> Just (st {sign = Fixed (flipSign s)})
+            Wild    -> Nothing
+        | (st, used) <- zip unc usedU
+        , not used
+        ]
+      -- Conclusion terms not covered -> missing premise must supply them
+      toSupply = [st | (st, used) <- zip conclTs usedC, not used]
+   in if any (== Nothing) toCancel
+        then Nothing
+        else
+          let terms = map (\(Just x) -> x) toCancel ++ toSupply
+           in if null terms then Nothing else Just (Statement terms)
+
+-- | Mark which uncancelled terms match which conclusion terms (same sign, same
+-- term expression and positions).
+matchTerms :: [SignedTerm] -> [SignedTerm] -> ([Bool], [Bool])
+matchTerms uncs concs =
+  let mu = replicate (length uncs) False
+      mc = replicate (length concs) False
+   in foldl
+        (\(u, c) i ->
+          case findMatch i (uncs !! i) concs c of
+            Just j  -> (setAt i True u, setAt j True c)
+            Nothing -> (u, c)
+        )
+        (mu, mc)
+        [0 .. length uncs - 1]
+
+findMatch :: Int -> SignedTerm -> [SignedTerm] -> [Bool] -> Maybe Int
+findMatch _ _ [] _ = Nothing
+findMatch _ st concs used = go 0
+  where
+    go j
+      | j >= length concs = Nothing
+      | used !! j = go (j + 1)
+      | signedTermMatch st (concs !! j) = Just j
+      | otherwise = go (j + 1)
+
+signedTermMatch :: SignedTerm -> SignedTerm -> Bool
+signedTermMatch a b =
+  sign a == sign b
+    && termExpr a == termExpr b
+    && positions a == positions b
+
+setAt :: Int -> a -> [a] -> [a]
+setAt i x xs = take i xs ++ [x] ++ drop (i + 1) xs
 
 -- ---------------------------------------------------------------------------
 -- Reference resolution

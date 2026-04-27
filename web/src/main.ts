@@ -20,7 +20,7 @@ import {
 import { prettyMood } from "./core/pretty";
 import { formatText as formatSylText } from "./core/format";
 import { formatText as formatTflText } from "./core/tfl/format";
-import { initRepl } from "./repl";
+import { initRepl, syncReplLang } from "./repl";
 
 type Lang = "syl" | "tfl";
 
@@ -318,13 +318,13 @@ proof ModConv
 proof UseConv
   @ModConv conv
   - R + P
-  ∴ - R + P
+  ∴ - R - Q
 
 -- obv: flip one sign, complement its term
 proof UseObv
   @ModConv obv
-  - Q + P
-  ∴ - Q + P
+  - non-P + R
+  ∴ - Q + R
 
 -- ============================================================
 -- Holes: use ? for unknowns
@@ -419,6 +419,7 @@ function switchToTab(id: string): void {
     }
     editor.focus();
     runCheck();
+    syncReplLang();
   }
   renderTabs();
 }
@@ -648,7 +649,7 @@ async function saveActiveTab(): Promise<void> {
     tab.model.setValue(formatted);
   }
 
-  if ("showSaveFilePicker" in window) {
+  if (typeof (window as any).showSaveFilePicker === "function") {
     try {
       const handle =
         tab.fileHandle ??
@@ -668,21 +669,27 @@ async function saveActiveTab(): Promise<void> {
       tab.name = handle.name;
       tab.dirty = false;
       renderTabs();
+      return;
     } catch {
-      // User cancelled
+      // User cancelled or API unavailable — fall through to download
     }
-  } else {
-    // Fallback: download
-    const blob = new Blob([tab.model.getValue()], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = tab.name;
-    a.click();
-    URL.revokeObjectURL(url);
-    tab.dirty = false;
-    renderTabs();
   }
+
+  // Fallback: prompt for filename then download
+  const name = prompt("Save as:", tab.name);
+  if (name === null) return; // cancelled
+  const blob = new Blob([tab.model.getValue()], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
+  tab.name = name;
+  tab.lang = langFromName(name);
+  monaco.editor.setModelLanguage(tab.model, langIdFor(tab.lang));
+  tab.dirty = false;
+  renderTabs();
 }
 
 // Cmd/Ctrl+S to save
@@ -1114,6 +1121,8 @@ initRepl({
   outputEl: document.getElementById("repl-output")!,
   inputEl: document.getElementById("repl-input") as HTMLInputElement,
   langToggle: document.getElementById("repl-lang-toggle") as HTMLButtonElement,
+  getBufferProofs: () => lastCheckResult?.tflResult?.checkProofs ?? [],
+  getBufferLang: () => activeTab()?.lang ?? "syl",
 });
 
 // -- Draggable splitter ------------------------------------------------------

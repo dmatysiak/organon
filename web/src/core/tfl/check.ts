@@ -244,7 +244,49 @@ function checkProofBlock(
     return { tag: "error", diags: [diag], fills: [fill] };
   }
 
-  // Premises have holes
+  // Check for exactly one whole-statement hole premise with concrete conclusion
+  if (concreteConclusion !== null) {
+    const holeIndices: number[] = [];
+    const concreteOthers: Statement[] = [];
+    for (let i = 0; i < stmtHs.length; i++) {
+      if (stmtHs[i].tag === "WholeStmtH") {
+        holeIndices.push(i);
+      } else {
+        const c = fromConcreteH(stmtHs[i]);
+        if (c !== null) concreteOthers.push(c);
+      }
+    }
+
+    if (
+      holeIndices.length === 1 &&
+      concreteOthers.length === stmtHs.length - 1
+    ) {
+      const holeIdx = holeIndices[0];
+      const holeLoc = block.proofPremises[holeIdx];
+      const solved = solvePremiseHole(concreteOthers, concreteConclusion);
+      if (solved !== null) {
+        const fill: HoleFill = {
+          holeFillEdits: [
+            {
+              fillEditStart: holeLoc.locStart,
+              fillEditEnd: holeLoc.locEnd,
+              fillEditText: prettyStatement(solved),
+            },
+          ],
+          holeFillLabel: prettyStatement(solved),
+        };
+        const diag: Diagnostic = {
+          diagStart: holeLoc.locStart,
+          diagEnd: holeLoc.locEnd,
+          diagSeverity: Severity.Warning,
+          diagMessage: `Solved premise: ${prettyStatement(solved)}`,
+        };
+        return { tag: "error", diags: [diag], fills: [fill] };
+      }
+    }
+  }
+
+  // Premises have holes we can't solve
   return {
     tag: "error",
     diags: [
@@ -267,6 +309,89 @@ function allConcrete(stmtHs: StatementH[]): Statement[] | null {
     result.push(s);
   }
   return result;
+}
+
+/**
+ * Solve for a missing premise given concrete known premises and a concrete
+ * conclusion.  The missing premise must supply terms that cancel the
+ * known-premises' uncancelled leftovers and provide any conclusion terms
+ * not already present.
+ */
+function solvePremiseHole(
+  knownPremises: Statement[],
+  conclusion: Statement,
+): Statement | null {
+  if (knownPremises.length === 0) {
+    // No known premises — the missing premise IS the conclusion
+    return conclusion;
+  }
+  const cancel = cancellation(knownPremises);
+  const uncancelled = cancel.uncancelled.map(([_, st]) => st);
+  const conclTerms = [...conclusion.terms];
+
+  const missingTerms: SignedTerm[] = [];
+
+  // Mark which uncancelled terms are consumed by the conclusion
+  const usedUncancelled = new Array(uncancelled.length).fill(false);
+  const usedConclusion = new Array(conclTerms.length).fill(false);
+
+  for (let i = 0; i < uncancelled.length; i++) {
+    for (let j = 0; j < conclTerms.length; j++) {
+      if (
+        !usedConclusion[j] &&
+        signedTermEqIgnoreSign(uncancelled[i], conclTerms[j]) &&
+        wildSignEqCheck(uncancelled[i].sign, conclTerms[j].sign)
+      ) {
+        usedUncancelled[i] = true;
+        usedConclusion[j] = true;
+        break;
+      }
+    }
+  }
+
+  // Uncancelled terms NOT in conclusion: missing premise must cancel them
+  for (let i = 0; i < uncancelled.length; i++) {
+    if (!usedUncancelled[i]) {
+      const st = uncancelled[i];
+      if (st.sign.tag !== "Fixed") return null; // can't flip wild
+      missingTerms.push({
+        sign: Fixed(flipSign(st.sign.sign)),
+        termExpr: st.termExpr,
+        positions: [...st.positions],
+      });
+    }
+  }
+
+  // Conclusion terms NOT covered by uncancelled: missing premise must provide them
+  for (let j = 0; j < conclTerms.length; j++) {
+    if (!usedConclusion[j]) {
+      missingTerms.push(conclTerms[j]);
+    }
+  }
+
+  if (missingTerms.length === 0) return null;
+  return { terms: missingTerms };
+}
+
+function signedTermEqIgnoreSign(a: SignedTerm, b: SignedTerm): boolean {
+  return (
+    termExprKey(a.termExpr) === termExprKey(b.termExpr) &&
+    a.positions.length === b.positions.length &&
+    a.positions.every((p, i) => p === b.positions[i])
+  );
+}
+
+function wildSignEqCheck(a: WildSign, b: WildSign): boolean {
+  if (a.tag === "Fixed" && b.tag === "Fixed") return a.sign === b.sign;
+  if (a.tag === "Wild" || b.tag === "Wild") return true;
+  return false;
+}
+
+function termExprKey(te: TermExpr): string {
+  if (te.tag === "Atomic") {
+    return `A:${te.term.termName}|${te.term.complemented}`;
+  }
+  return `C:(${te.elements.map((st) => termExprKey(st.termExpr)).join("+")})`;
 }
 
 // ---------------------------------------------------------------------------
