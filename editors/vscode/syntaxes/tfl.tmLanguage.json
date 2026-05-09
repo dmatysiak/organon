@@ -5,6 +5,7 @@
   "fileTypes": ["tfl"],
   "patterns": [
     { "include": "#comment" },
+    { "include": "#rel-directive" },
     { "include": "#open-directive" },
     { "include": "#proof-header" },
     { "include": "#conclusion-marker" },
@@ -26,6 +27,15 @@
       "captures": {
         "1": { "name": "keyword.control.open.tfl" },
         "2": { "name": "entity.name.namespace.tfl" }
+      }
+    },
+    "rel-directive": {
+      "match": "^(rel)\\s+(\\S+)\\s+(\"[^\"]*\")\\s+(\"[^\"]*\")",
+      "captures": {
+        "1": { "name": "keyword.control.rel.tfl" },
+        "2": { "name": "entity.name.type.tfl" },
+        "3": { "name": "string.quoted.double.tfl" },
+        "4": { "name": "string.quoted.double.tfl" }
       }
     },
     "proof-header": {

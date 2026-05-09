@@ -20,11 +20,14 @@ export function activate(context: ExtensionContext): void {
     args: [],
   };
 
+  const outputChannel = window.createOutputChannel("Organon", { log: true });
+
   const clientOptions: LanguageClientOptions = {
     documentSelector: [
       { scheme: "file", language: "syl" },
       { scheme: "file", language: "tfl" },
     ],
+    outputChannel,
   };
 
   client = new LanguageClient(
@@ -34,7 +37,9 @@ export function activate(context: ExtensionContext): void {
     clientOptions,
   );
 
-  client.start();
+  client.start().catch((err) => {
+    outputChannel.appendLine(`Failed to start Organon LSP: ${err}`);
+  });
 }
 
 export function deactivate(): Thenable<void> | undefined {
