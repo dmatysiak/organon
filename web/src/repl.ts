@@ -494,7 +494,13 @@ function handlePredTree(args: string, ui: ReplUI): OutputLine[] {
   }
 
   if (proofs.length === 0) {
-    return [err("No valid proofs in the current buffer.")];
+    const bufName = ui.getBufferName();
+    const bufLang = ui.getBufferLang();
+    return [
+      err(
+        `No valid proofs in the current buffer. [debug: buffer="${bufName}", bufLang=${bufLang}, replLang=${lang}, rawCount=${bufferProofs.length}]`,
+      ),
+    ];
   }
   const tree = buildPredTree(proofs);
   if (tree.terms.length === 0) {

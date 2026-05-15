@@ -170,8 +170,9 @@ export function buildPredTree(
 // SVG renderer
 // ---------------------------------------------------------------------------
 
-const NODE_W = 100;
 const NODE_H = 28;
+const CHAR_W = 7.2; // approximate monospace char width at 12px
+const NODE_PAD_X = 16; // horizontal padding inside node
 const H_GAP = 24;
 const V_GAP = 56;
 const PAD = 24;
@@ -181,6 +182,7 @@ type NodeLayout = {
   key: string;
   x: number;
   y: number;
+  w: number;
   component: number;
 };
 
@@ -198,6 +200,10 @@ const COMPONENT_COLORS = [
 
 function componentColor(idx: number): string {
   return COMPONENT_COLORS[idx % COMPONENT_COLORS.length];
+}
+
+function nodeWidth(key: string): number {
+  return Math.max(40, key.length * CHAR_W + NODE_PAD_X);
 }
 
 function layoutPredTree(tree: PredTreeData): {
@@ -259,23 +265,27 @@ function layoutPredTree(tree: PredTreeData): {
     }
   }
 
-  // Assign x positions using a post-order traversal
-  // Each leaf gets one slot; internal nodes center over children
-  const xSlot = new Map<string, number>();
+  // Assign x positions using absolute coordinates
+  // Each leaf gets placed after the previous; internal nodes center over children
+  const nodeX = new Map<string, number>();
+  let nextX = 0;
 
-  function assignSlots(node: string): void {
+  function assignPositions(node: string): void {
     const ch = children.get(node) ?? [];
     if (ch.length === 0) {
-      xSlot.set(node, assignSlots.next);
-      assignSlots.next++;
+      nodeX.set(node, nextX);
+      nextX += nodeWidth(node) + H_GAP;
       return;
     }
-    for (const c of ch) assignSlots(c);
-    const first = xSlot.get(ch[0])!;
-    const last = xSlot.get(ch[ch.length - 1])!;
-    xSlot.set(node, (first + last) / 2);
+    for (const c of ch) assignPositions(c);
+    const firstX = nodeX.get(ch[0])!;
+    const lastX = nodeX.get(ch[ch.length - 1])!;
+    const firstW = nodeWidth(ch[0]);
+    const lastW = nodeWidth(ch[ch.length - 1]);
+    const myW = nodeWidth(node);
+    const center = (firstX + firstW / 2 + lastX + lastW / 2) / 2 - myW / 2;
+    nodeX.set(node, center);
   }
-  assignSlots.next = 0;
 
   // Lay out each component vertically stacked, each with its own y-offset
   const COMP_GAP = 24; // vertical gap between components
@@ -285,11 +295,11 @@ function layoutPredTree(tree: PredTreeData): {
 
   for (let ci = 0; ci < tree.components.length; ci++) {
     const comp = tree.components[ci];
-    // Reset x-slot counter for each component so they all start at x=0
-    assignSlots.next = 0;
+    // Reset x counter for each component so they all start at x=0
+    nextX = 0;
     const root = comp.find((t) => levels.get(t) === 0 || !parentOf.has(t));
     if (root !== undefined) {
-      assignSlots(root);
+      assignPositions(root);
     }
 
     // Find max level within this component
@@ -306,17 +316,18 @@ function layoutPredTree(tree: PredTreeData): {
   const nodes: NodeLayout[] = [];
   for (const t of tree.terms) {
     const ci = compIndex.get(t) ?? 0;
-    const slot = xSlot.get(t) ?? 0;
+    const x = nodeX.get(t) ?? 0;
     const lvl = levels.get(t) ?? 0;
     nodes.push({
       key: t,
-      x: PAD + slot * (NODE_W + H_GAP),
+      x: PAD + x,
       y: compYOffset[ci] + lvl * (NODE_H + V_GAP),
+      w: nodeWidth(t),
       component: ci,
     });
   }
 
-  const maxX = Math.max(0, ...nodes.map((n) => n.x + NODE_W));
+  const maxX = Math.max(0, ...nodes.map((n) => n.x + n.w));
   const totalHeight = currentY - COMP_GAP + LEGEND_H + PAD;
   return {
     nodes,
@@ -383,7 +394,7 @@ export function renderPredTree(tree: PredTreeData): HTMLElement {
     const rect = document.createElementNS(NS, "rect");
     rect.setAttribute("x", String(n.x));
     rect.setAttribute("y", String(n.y));
-    rect.setAttribute("width", String(NODE_W));
+    rect.setAttribute("width", String(n.w));
     rect.setAttribute("height", String(NODE_H));
     rect.setAttribute("rx", "4");
     rect.setAttribute("fill", "#264f78");
@@ -392,7 +403,7 @@ export function renderPredTree(tree: PredTreeData): HTMLElement {
     g.appendChild(rect);
 
     const text = document.createElementNS(NS, "text");
-    text.setAttribute("x", String(n.x + NODE_W / 2));
+    text.setAttribute("x", String(n.x + n.w / 2));
     text.setAttribute("y", String(n.y + NODE_H / 2 + 4));
     text.setAttribute("text-anchor", "middle");
     text.setAttribute("fill", "#d4d4d4");
@@ -507,15 +518,15 @@ function drawEdge(
   let x1: number, y1: number, x2: number, y2: number;
 
   if (sameLvl) {
-    x1 = n1.x + NODE_W / 2;
+    x1 = n1.x + n1.w / 2;
     y1 = n1.y + NODE_H / 2;
-    x2 = n2.x + NODE_W / 2;
+    x2 = n2.x + n2.w / 2;
     y2 = n2.y + NODE_H / 2;
   } else {
     const [upper, lower] = n1.y < n2.y ? [n1, n2] : [n2, n1];
-    x1 = upper.x + NODE_W / 2;
+    x1 = upper.x + upper.w / 2;
     y1 = upper.y + NODE_H;
-    x2 = lower.x + NODE_W / 2;
+    x2 = lower.x + lower.w / 2;
     y2 = lower.y;
   }
 

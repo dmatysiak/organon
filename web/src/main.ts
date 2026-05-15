@@ -50,13 +50,15 @@ monaco.languages.setMonarchTokensProvider(SYL_LANG, {
       [/^(proof)(\s+)(\S+)/, ["keyword", "", "function"]],
       [/∴|therefore\b/, "keyword"],
       [
-        /(@[A-Za-z_][A-Za-z0-9_-]*\.[A-Za-z_][A-Za-z0-9_-]*)(\s+(?:conv|per-accidens)\b)?/,
+        /(@[A-Za-z_][A-Za-z0-9_-]*\.[A-Za-z_][A-Za-z0-9_-]*)(\s+(?:conv|per-accidens)\b)/,
         ["variable", "keyword"],
       ],
+      [/@[A-Za-z_][A-Za-z0-9_-]*\.[A-Za-z_][A-Za-z0-9_-]*/, "variable"],
       [
-        /(@[A-Za-z_][A-Za-z0-9_-]*)(\s+(?:conv|per-accidens)\b)?/,
+        /(@[A-Za-z_][A-Za-z0-9_-]*)(\s+(?:conv|per-accidens)\b)/,
         ["variable", "keyword"],
       ],
+      [/@[A-Za-z_][A-Za-z0-9_-]*/, "variable"],
       [/\b(every|no|some)\b/i, "keyword"],
       [/\b(is\s+not|is)\b/, "keyword"],
       [/\?/, "variable"],
@@ -77,13 +79,15 @@ monaco.languages.setMonarchTokensProvider(TFL_LANG, {
       [/^(proof)(\s+)(\S+)/, ["keyword", "", "function"]],
       [/∴|therefore\b/, "keyword"],
       [
-        /(@[A-Za-z_][A-Za-z0-9_-]*\.[A-Za-z_][A-Za-z0-9_-]*)(\s+(?:conv|per-accidens|obv|contra)\b)?/,
+        /(@[A-Za-z_][A-Za-z0-9_-]*\.[A-Za-z_][A-Za-z0-9_-]*)(\s+(?:conv|per-accidens|obv|contra)\b)/,
         ["variable", "keyword"],
       ],
+      [/@[A-Za-z_][A-Za-z0-9_-]*\.[A-Za-z_][A-Za-z0-9_-]*/, "variable"],
       [
-        /(@[A-Za-z_][A-Za-z0-9_-]*)(\s+(?:conv|per-accidens|obv|contra)\b)?/,
+        /(@[A-Za-z_][A-Za-z0-9_-]*)(\s+(?:conv|per-accidens|obv|contra)\b)/,
         ["variable", "keyword"],
       ],
+      [/@[A-Za-z_][A-Za-z0-9_-]*/, "variable"],
       [/[+\-]/, "keyword.operator"],
       [/\*/, "keyword.operator"],
       [/<\d+(?:,\d+)*>/, "number"],
@@ -744,12 +748,19 @@ function runCheck(): void {
 
   const tab = activeTab();
   const lang: Lang = tab ? tab.lang : "syl";
+  console.log("[runCheck] lang:", lang, "tab:", tab?.name);
   const langId = langIdFor(lang);
   const text = model.getValue();
 
   if (lang === "tfl") {
     const parsed = parseTflDocument(text);
     if (parsed instanceof TflParseError) {
+      console.log(
+        "[runCheck] TFL PARSE ERROR:",
+        parsed.line,
+        parsed.col,
+        parsed.message,
+      );
       monaco.editor.setModelMarkers(model, langId, [
         {
           startLineNumber: parsed.line,
@@ -765,6 +776,14 @@ function runCheck(): void {
     }
 
     const result = checkTflDocument(emptyTflExt, parsed);
+    console.log("[runCheck] TFL check complete:", {
+      proofCount: result.checkProofs.length,
+      diagCount: result.checkDiagnostics.length,
+      diags: result.checkDiagnostics.map(
+        (d) => `${d.diagStart.posLine}:${d.diagStart.posCol} ${d.diagMessage}`,
+      ),
+      parsedProofCount: parsed.docProofs.length,
+    });
     lastCheckResult = {
       lang: "tfl",
       checkDiagnostics: result.checkDiagnostics,

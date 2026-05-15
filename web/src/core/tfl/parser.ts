@@ -122,7 +122,13 @@ export class ParserState {
       this.advance();
     }
     // Keyword must not be followed by a term char (prevents "every" matching "everyX")
-    if (!this.eof && isTflTermChar(this.peek()) && kw !== "∴") {
+    // Exception: "∴" and "non-" are always valid even when followed by a term char
+    if (
+      !this.eof &&
+      isTflTermChar(this.peek()) &&
+      kw !== "∴" &&
+      kw !== "non-"
+    ) {
       this.restore(s);
       return false;
     }
