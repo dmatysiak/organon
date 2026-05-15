@@ -2,6 +2,15 @@
 // Reference: Englebretsen, "Robust Reality" (2012)
 
 import { Sign, type Term, type SignedTerm, type Statement } from "./types";
+import {
+  NODE_H,
+  nodeWidth,
+  createSvg,
+  appendBackground,
+  drawNode,
+  drawNodeEdge,
+  drawLegend,
+} from "./treeutil";
 
 // ---------------------------------------------------------------------------
 // Relation types
@@ -216,8 +225,6 @@ function transitiveUClosure(
 // SVG renderer
 // ---------------------------------------------------------------------------
 
-const NODE_W = 90;
-const NODE_H = 28;
 const H_GAP = 30;
 const V_GAP = 60;
 const PAD = 20;
@@ -226,6 +233,7 @@ type NodeLayout = {
   key: string;
   x: number;
   y: number;
+  w: number;
 };
 
 /**
@@ -288,14 +296,23 @@ function layoutTermTree(tree: TermTreeData): {
   let maxWidth = 0;
   for (let lvl = 0; lvl <= maxLevel; lvl++) {
     const row = byLevel[lvl];
-    const rowWidth = row.length * NODE_W + (row.length - 1) * H_GAP;
-    maxWidth = Math.max(maxWidth, rowWidth);
+    // Compute row width with variable node widths
+    let rowWidth = 0;
     for (let i = 0; i < row.length; i++) {
+      rowWidth += nodeWidth(row[i]);
+      if (i > 0) rowWidth += H_GAP;
+    }
+    maxWidth = Math.max(maxWidth, rowWidth);
+    let xCursor = PAD;
+    for (let i = 0; i < row.length; i++) {
+      const w = nodeWidth(row[i]);
       nodes.push({
         key: row[i],
-        x: PAD + i * (NODE_W + H_GAP),
+        x: xCursor,
         y: PAD + lvl * (NODE_H + V_GAP),
+        w,
       });
+      xCursor += w + H_GAP;
     }
   }
 
@@ -315,27 +332,15 @@ export function renderTermTree(tree: TermTreeData): HTMLElement {
   const container = document.createElement("div");
   container.style.position = "relative";
 
-  const NS = "http://www.w3.org/2000/svg";
-  const svg = document.createElementNS(NS, "svg");
-  svg.setAttribute("width", String(width));
-  svg.setAttribute("height", String(height));
-  svg.setAttribute("font-family", "'SF Mono','Fira Code',Menlo,monospace");
-  svg.setAttribute("font-size", "12");
-
-  // Background
-  const bg = document.createElementNS(NS, "rect");
-  bg.setAttribute("width", String(width));
-  bg.setAttribute("height", String(height));
-  bg.setAttribute("fill", "#1e1e1e");
-  bg.setAttribute("rx", "4");
-  svg.appendChild(bg);
+  const svg = createSvg(width, height);
+  appendBackground(svg, width, height);
 
   // Draw U-edges (direct) as solid arrows
   for (const e of tree.uEdges) {
     const from = nodeMap.get(e.from);
     const to = nodeMap.get(e.to);
     if (from && to) {
-      drawArrow(svg, NS, from, to, "#4ec9b0", "U", false);
+      drawNodeEdge(svg, from, to, "#4ec9b0", { arrow: true });
     }
   }
 
@@ -344,7 +349,7 @@ export function renderTermTree(tree: TermTreeData): HTMLElement {
     const from = nodeMap.get(e.from);
     const to = nodeMap.get(e.to);
     if (from && to) {
-      drawArrow(svg, NS, from, to, "#4ec9b0", "U*", true);
+      drawNodeEdge(svg, from, to, "#4ec9b0", { arrow: true, dashed: true, opacity: 0.5 });
     }
   }
 
@@ -353,7 +358,7 @@ export function renderTermTree(tree: TermTreeData): HTMLElement {
     const n1 = nodeMap.get(e.term1);
     const n2 = nodeMap.get(e.term2);
     if (n1 && n2) {
-      drawLine(svg, NS, n1, n2, "#f44747", "E", true);
+      drawNodeEdge(svg, n1, n2, "#f44747", { dashed: true, opacity: 0.6 });
     }
   }
 
@@ -362,144 +367,38 @@ export function renderTermTree(tree: TermTreeData): HTMLElement {
     const n1 = nodeMap.get(e.term1);
     const n2 = nodeMap.get(e.term2);
     if (n1 && n2) {
-      drawLine(svg, NS, n1, n2, "#569cd6", "I", true);
+      drawNodeEdge(svg, n1, n2, "#569cd6", { dashed: true, opacity: 0.6 });
     }
   }
 
-  // Draw N-pairs as double-headed purple arrows
+  // Draw N-pairs as purple lines
   for (const [pos, neg] of tree.nPairs) {
     const n1 = nodeMap.get(pos);
     const n2 = nodeMap.get(neg);
     if (n1 && n2) {
-      drawLine(svg, NS, n1, n2, "#c586c0", "N", false);
+      drawNodeEdge(svg, n1, n2, "#c586c0", { opacity: 0.6 });
     }
   }
 
   // Draw nodes
   for (const n of nodes) {
-    const g = document.createElementNS(NS, "g");
-    g.style.cursor = "default";
-
-    const rect = document.createElementNS(NS, "rect");
-    rect.setAttribute("x", String(n.x));
-    rect.setAttribute("y", String(n.y));
-    rect.setAttribute("width", String(NODE_W));
-    rect.setAttribute("height", String(NODE_H));
-    rect.setAttribute("rx", "4");
-    rect.setAttribute("fill", "#264f78");
-    rect.setAttribute("stroke", "#3c3c3c");
-    g.appendChild(rect);
-
-    const text = document.createElementNS(NS, "text");
-    text.setAttribute("x", String(n.x + NODE_W / 2));
-    text.setAttribute("y", String(n.y + NODE_H / 2 + 4));
-    text.setAttribute("text-anchor", "middle");
-    text.setAttribute("fill", "#d4d4d4");
-    text.textContent = n.key;
-    g.appendChild(text);
-
-    svg.appendChild(g);
+    drawNode(svg, n.x, n.y, n.w, n.key);
   }
 
   // Legend
   const legendY = height - 16;
-  const legendItems = [
-    { color: "#4ec9b0", label: "U (containment)", dash: false },
-    { color: "#f44747", label: "E (disjoint)", dash: true },
-    { color: "#569cd6", label: "I (overlap)", dash: true },
-    { color: "#c586c0", label: "N (complement)", dash: false },
-  ];
-  let lx = PAD;
-  for (const item of legendItems) {
-    const line = document.createElementNS(NS, "line");
-    line.setAttribute("x1", String(lx));
-    line.setAttribute("y1", String(legendY));
-    line.setAttribute("x2", String(lx + 20));
-    line.setAttribute("y2", String(legendY));
-    line.setAttribute("stroke", item.color);
-    line.setAttribute("stroke-width", "2");
-    if (item.dash) line.setAttribute("stroke-dasharray", "4,3");
-    svg.appendChild(line);
-    const lbl = document.createElementNS(NS, "text");
-    lbl.setAttribute("x", String(lx + 24));
-    lbl.setAttribute("y", String(legendY + 4));
-    lbl.setAttribute("fill", "#969696");
-    lbl.setAttribute("font-size", "10");
-    lbl.textContent = item.label;
-    svg.appendChild(lbl);
-    lx += 24 + item.label.length * 6 + 16;
-  }
+  drawLegend(
+    svg,
+    [
+      { color: "#4ec9b0", label: "U (containment)", dash: false },
+      { color: "#f44747", label: "E (disjoint)", dash: true },
+      { color: "#569cd6", label: "I (overlap)", dash: true },
+      { color: "#c586c0", label: "N (complement)", dash: false },
+    ],
+    PAD,
+    legendY,
+  );
 
   container.appendChild(svg);
   return container;
-}
-
-// ---------------------------------------------------------------------------
-// SVG drawing helpers
-// ---------------------------------------------------------------------------
-
-function drawArrow(
-  svg: SVGSVGElement,
-  NS: string,
-  from: NodeLayout,
-  to: NodeLayout,
-  color: string,
-  _label: string,
-  dashed: boolean,
-): void {
-  const x1 = from.x + NODE_W / 2;
-  const y1 = from.y + NODE_H;
-  const x2 = to.x + NODE_W / 2;
-  const y2 = to.y;
-
-  const line = document.createElementNS(NS, "line");
-  line.setAttribute("x1", String(x1));
-  line.setAttribute("y1", String(y1));
-  line.setAttribute("x2", String(x2));
-  line.setAttribute("y2", String(y2));
-  line.setAttribute("stroke", color);
-  line.setAttribute("stroke-width", "1.5");
-  if (dashed) line.setAttribute("stroke-dasharray", "4,3");
-  line.setAttribute("opacity", dashed ? "0.5" : "0.8");
-  svg.appendChild(line);
-
-  // Arrowhead
-  const angle = Math.atan2(y2 - y1, x2 - x1);
-  const headLen = 8;
-  const ax = x2 - headLen * Math.cos(angle - Math.PI / 6);
-  const ay = y2 - headLen * Math.sin(angle - Math.PI / 6);
-  const bx = x2 - headLen * Math.cos(angle + Math.PI / 6);
-  const by = y2 - headLen * Math.sin(angle + Math.PI / 6);
-  const poly = document.createElementNS(NS, "polygon");
-  poly.setAttribute("points", `${x2},${y2} ${ax},${ay} ${bx},${by}`);
-  poly.setAttribute("fill", color);
-  poly.setAttribute("opacity", dashed ? "0.5" : "0.8");
-  svg.appendChild(poly);
-}
-
-function drawLine(
-  svg: SVGSVGElement,
-  NS: string,
-  n1: NodeLayout,
-  n2: NodeLayout,
-  color: string,
-  _label: string,
-  dashed: boolean,
-): void {
-  // Connect sides or top/bottom depending on relative position
-  const x1 = n1.x + NODE_W / 2;
-  const y1 = n1.y + NODE_H / 2;
-  const x2 = n2.x + NODE_W / 2;
-  const y2 = n2.y + NODE_H / 2;
-
-  const line = document.createElementNS(NS, "line");
-  line.setAttribute("x1", String(x1));
-  line.setAttribute("y1", String(y1));
-  line.setAttribute("x2", String(x2));
-  line.setAttribute("y2", String(y2));
-  line.setAttribute("stroke", color);
-  line.setAttribute("stroke-width", "1.5");
-  if (dashed) line.setAttribute("stroke-dasharray", "4,3");
-  line.setAttribute("opacity", "0.6");
-  svg.appendChild(line);
 }
