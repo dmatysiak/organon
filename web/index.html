@@ -218,6 +218,23 @@
         color: #f44747;
       }
 
+      .repl-buffer-switch {
+        color: #5a5a5a;
+        font-size: 11px;
+        margin: 4px 0;
+        letter-spacing: 0.5px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .repl-buffer-switch::before,
+      .repl-buffer-switch::after {
+        content: "";
+        flex: 1;
+        border-top: 1px solid #3c3c3c;
+      }
+
       .repl-input-row {
         display: flex;
         align-items: center;

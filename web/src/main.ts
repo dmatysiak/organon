@@ -1123,6 +1123,7 @@ initRepl({
   langToggle: document.getElementById("repl-lang-toggle") as HTMLButtonElement,
   getBufferProofs: () => lastCheckResult?.tflResult?.checkProofs ?? [],
   getBufferLang: () => activeTab()?.lang ?? "syl",
+  getBufferName: () => activeTab()?.name ?? "untitled",
 });
 
 // -- Draggable splitter ------------------------------------------------------

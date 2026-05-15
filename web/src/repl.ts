@@ -43,6 +43,7 @@ import {
 } from "./core/tfl/pretty";
 import { buildTree, renderTreeInteractive } from "./core/tfl/tree";
 import { buildTermTree, renderTermTree } from "./core/tfl/termtree";
+import { buildPredTree, renderPredTree } from "./core/tfl/predtree";
 import type { Statement as TflStatement } from "./core/tfl/types";
 import type { CheckedProof as TflCheckedProof } from "./core/tfl/check";
 
@@ -57,6 +58,7 @@ let tflOutputMode: TflOutputMode = "tfl";
 let lastTflInference: TflInference | null = null;
 let lastTflResult: TflValidationResult | null = null;
 let replUI: ReplUI | null = null;
+let lastBufferName: string | null = null;
 
 // -- Output rendering -------------------------------------------------------
 
@@ -71,6 +73,7 @@ export type ReplUI = {
   langToggle: HTMLButtonElement;
   getBufferProofs: () => TflCheckedProof[];
   getBufferLang: () => Lang;
+  getBufferName: () => string;
 };
 
 function appendLines(ui: ReplUI, lines: OutputLine[]): void {
@@ -120,6 +123,9 @@ function handleHelp(): OutputLine[] {
       info("  :solve <premises>       Compute conclusion from premises"),
       info("  :output tfl|english|visual  Set display mode"),
       info("  :tree [<name>]          Show term tree from buffer proofs"),
+      info(
+        "  :ptree [<name>]         Show predicability tree from buffer proofs",
+      ),
       info("  :lang syl|tfl           Switch language"),
       info("  :clear                  Clear output"),
       info("  :help                   Show this help"),
@@ -128,7 +134,7 @@ function handleHelp(): OutputLine[] {
       info("  - S + M; - M + P; - S + P"),
       info("  every S is M; every M is P; every S is P"),
       info(""),
-      info("Shortcuts: :v, :p, :s, :o, :tr, :l, :h"),
+      info("Shortcuts: :v, :p, :s, :o, :tr, :pt, :l, :h"),
     ];
   }
   return [
@@ -465,6 +471,39 @@ function handleTermTree(args: string, ui: ReplUI): OutputLine[] {
   return [{ element: el, cls: "dom" as const }];
 }
 
+function handlePredTree(args: string, ui: ReplUI): OutputLine[] {
+  const bufferProofs = ui.getBufferProofs();
+  const proofs = bufferProofs.map((p) => ({
+    name: p.checkedName,
+    premises: p.checkedInference.premises,
+    conclusion: p.checkedInference.conclusion,
+  }));
+
+  if (args.trim().length > 0) {
+    const name = args.trim();
+    const match = proofs.find((p) => p.name === name);
+    if (!match) {
+      return [err(`No proof named "${name}" in buffer.`)];
+    }
+    const tree = buildPredTree([match]);
+    if (tree.terms.length === 0) {
+      return [info("No predicability relations found in this proof.")];
+    }
+    const el = renderPredTree(tree);
+    return [{ element: el, cls: "dom" as const }];
+  }
+
+  if (proofs.length === 0) {
+    return [err("No valid proofs in the current buffer.")];
+  }
+  const tree = buildPredTree(proofs);
+  if (tree.terms.length === 0) {
+    return [info("No predicability relations found across proofs.")];
+  }
+  const el = renderPredTree(tree);
+  return [{ element: el, cls: "dom" as const }];
+}
+
 function handleLang(args: string, ui: ReplUI): OutputLine[] {
   switch (args.toLowerCase()) {
     case "syl":
@@ -545,6 +584,10 @@ function dispatch(raw: string, ui: ReplUI): void {
       case ":tr":
         lines = handleTermTree(args, ui);
         break;
+      case ":ptree":
+      case ":pt":
+        lines = handlePredTree(args, ui);
+        break;
       default:
         if (cmd.startsWith(":")) {
           lines = [
@@ -609,8 +652,9 @@ let historyIdx = -1;
 export function initRepl(ui: ReplUI): void {
   replUI = ui;
 
-  // Sync initial language with buffer
+  // Sync initial language and buffer name
   lang = ui.getBufferLang();
+  lastBufferName = ui.getBufferName();
   updatePrompt(ui);
 
   // Welcome message
@@ -659,8 +703,22 @@ export function initRepl(ui: ReplUI): void {
 /** Called by main.ts when the active buffer changes. */
 export function syncReplLang(): void {
   if (!replUI) return;
+  const bufName = replUI.getBufferName();
   const bufLang = replUI.getBufferLang();
-  if (bufLang !== lang) {
+  const nameChanged = bufName !== lastBufferName;
+  const langChanged = bufLang !== lang;
+
+  if (nameChanged) {
+    lastBufferName = bufName;
+    // Emit a subtle separator indicating the buffer switch
+    const div = document.createElement("div");
+    div.className = "repl-line repl-buffer-switch";
+    div.textContent = bufName;
+    replUI.outputEl.appendChild(div);
+    replUI.outputEl.scrollTop = replUI.outputEl.scrollHeight;
+  }
+
+  if (langChanged) {
     lang = bufLang;
     updatePrompt(replUI);
   }
