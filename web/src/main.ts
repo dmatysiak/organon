@@ -70,6 +70,10 @@ monaco.languages.setMonarchTokensProvider(TFL_LANG, {
     root: [
       [/--.*$/, "comment"],
       [/^(open)(\s+)(\S+)/, ["keyword", "", "type.identifier"]],
+      [
+        /^(rel)(\s+)(\S+)(\s+)("[^"]*")(\s+)("[^"]*")/,
+        ["keyword", "", "type.identifier", "", "string", "", "string"],
+      ],
       [/^(proof)(\s+)(\S+)/, ["keyword", "", "function"]],
       [/∴|therefore\b/, "keyword"],
       [
