@@ -262,13 +262,12 @@ function layoutPredTree(tree: PredTreeData): {
   // Assign x positions using a post-order traversal
   // Each leaf gets one slot; internal nodes center over children
   const xSlot = new Map<string, number>();
-  let nextSlot = 0;
 
   function assignSlots(node: string): void {
     const ch = children.get(node) ?? [];
     if (ch.length === 0) {
-      xSlot.set(node, nextSlot);
-      nextSlot++;
+      xSlot.set(node, assignSlots.next);
+      assignSlots.next++;
       return;
     }
     for (const c of ch) assignSlots(c);
@@ -276,37 +275,53 @@ function layoutPredTree(tree: PredTreeData): {
     const last = xSlot.get(ch[ch.length - 1])!;
     xSlot.set(node, (first + last) / 2);
   }
+  assignSlots.next = 0;
 
-  // Assign slots per component, with a gap between components
+  // Lay out each component vertically stacked, each with its own y-offset
+  const COMP_GAP = 24; // vertical gap between components
+  const compYOffset: number[] = [];
+  const compMaxLevel: number[] = [];
+  let currentY = PAD;
+
   for (let ci = 0; ci < tree.components.length; ci++) {
     const comp = tree.components[ci];
-    // Find root of this component (level 0)
+    // Reset x-slot counter for each component so they all start at x=0
+    assignSlots.next = 0;
     const root = comp.find((t) => levels.get(t) === 0 || !parentOf.has(t));
     if (root !== undefined) {
       assignSlots(root);
     }
-    // Gap between components
-    nextSlot += 1;
+
+    // Find max level within this component
+    let maxLvl = 0;
+    for (const t of comp) {
+      const lvl = levels.get(t) ?? 0;
+      if (lvl > maxLvl) maxLvl = lvl;
+    }
+    compMaxLevel.push(maxLvl);
+    compYOffset.push(currentY);
+    currentY += (maxLvl + 1) * (NODE_H + V_GAP) + COMP_GAP;
   }
 
-  const maxLevel = Math.max(0, ...Array.from(levels.values()));
   const nodes: NodeLayout[] = [];
   for (const t of tree.terms) {
+    const ci = compIndex.get(t) ?? 0;
     const slot = xSlot.get(t) ?? 0;
     const lvl = levels.get(t) ?? 0;
     nodes.push({
       key: t,
       x: PAD + slot * (NODE_W + H_GAP),
-      y: PAD + lvl * (NODE_H + V_GAP),
-      component: compIndex.get(t) ?? 0,
+      y: compYOffset[ci] + lvl * (NODE_H + V_GAP),
+      component: ci,
     });
   }
 
   const maxX = Math.max(0, ...nodes.map((n) => n.x + NODE_W));
+  const totalHeight = currentY - COMP_GAP + LEGEND_H + PAD;
   return {
     nodes,
     width: maxX + PAD,
-    height: PAD + (maxLevel + 1) * (NODE_H + V_GAP) + LEGEND_H,
+    height: totalHeight,
   };
 }
 
