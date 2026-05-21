@@ -40,7 +40,8 @@ organon> :solve every M is P; every S is M; ?
 ```
 
 Use `:tradition strict|traditional|full` to select between 15, 19 or 24
-valid moods.
+valid moods. Use `:moods` to list all valid moods for the current
+tradition and `:mood <name>` to show details of a specific mood.
 
 ## LSP server
 
@@ -178,14 +179,15 @@ premise regardless of which tradition validated it.
 ## Batch checker
 
 ```
-stack exec organon-check -- [file.syl | dir ...]
+stack exec organon-check -- [file.syl | file.tfl | dir ...]
 ```
 
-Checks `.syl` files and prints diagnostics in `file:line:col: severity: message`
-format. Defaults to the current directory. Silent on success; exits non-zero on errors.
+Checks `.syl` and `.tfl` files and prints diagnostics in
+`file:line:col: severity: message` format. Defaults to the current
+directory. Silent on success; exits non-zero on errors.
 
 ```
-$ stack exec organon-check -- examples/Basics.syl examples/God.syl
+$ stack exec organon-check -- examples/Basics.syl examples/God.tfl
 $ echo $?
 0
 ```
@@ -322,7 +324,7 @@ The LSP and REPL solve holes by computing valid cancellations.
 ### TFL REPL
 
 ```
-stack exec organon-repl tfl
+stack exec organon-repl -- --lang tfl
 ```
 
 Commands:
@@ -398,6 +400,19 @@ code --install-extension editors/vscode/organon-0.1.0.vsix
 
 After installing or reinstalling, reload the VS Code window
 (Cmd+Shift+P → "Developer: Reload Window").
+
+## Examples
+
+The [`examples/`](examples/) directory contains annotated proof files
+demonstrating syllogistic and TFL features.
+
+## Web app
+
+Try organon in your browser at
+<https://dmatysiak.github.io/organon>.
+
+The `web/` directory contains the source. See
+[`web/README.md`](web/README.md) for build and deployment instructions.
 
 ### LSP server setup
 

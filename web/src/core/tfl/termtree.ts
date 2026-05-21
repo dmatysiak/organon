@@ -349,7 +349,11 @@ export function renderTermTree(tree: TermTreeData): HTMLElement {
     const from = nodeMap.get(e.from);
     const to = nodeMap.get(e.to);
     if (from && to) {
-      drawNodeEdge(svg, from, to, "#4ec9b0", { arrow: true, dashed: true, opacity: 0.5 });
+      drawNodeEdge(svg, from, to, "#4ec9b0", {
+        arrow: true,
+        dashed: true,
+        opacity: 0.5,
+      });
     }
   }
 

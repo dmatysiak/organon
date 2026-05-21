@@ -40,7 +40,11 @@ export function createSvg(width: number, height: number): SVGSVGElement {
 }
 
 /** Append a full-size background rect. */
-export function appendBackground(svg: SVGSVGElement, width: number, height: number): void {
+export function appendBackground(
+  svg: SVGSVGElement,
+  width: number,
+  height: number,
+): void {
   const bg = document.createElementNS(NS, "rect");
   bg.setAttribute("width", String(width));
   bg.setAttribute("height", String(height));
