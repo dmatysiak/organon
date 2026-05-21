@@ -1,0 +1,105 @@
+-- Syllogistic Examples
+-- Demonstrates the full range of .syl functionality.
+
+tradition Full
+
+-- ============================================================
+-- Basic figures
+-- ============================================================
+
+-- Figure 1 (perfect syllogisms)
+proof Barbara
+  every M is P
+  every S is M
+  ∴ every S is P
+
+proof Celarent
+  no M is P
+  every S is M
+  ∴ no S is P
+
+proof Darii
+  every M is P
+  some S is M
+  ∴ some S is P
+
+proof Ferio
+  no M is P
+  some S is M
+  ∴ some S is not P
+
+-- Figure 2
+proof Cesare
+  no P is M
+  every S is M
+  ∴ no S is P
+
+proof Camestres
+  every P is M
+  no S is M
+  ∴ no S is P
+
+-- Figure 3 (requires existential import)
+proof Darapti
+  every M is P
+  every M is S
+  ∴ some S is P
+
+-- Figure 4
+proof Bramantip
+  every P is M
+  every M is S
+  ∴ some S is P
+
+-- ============================================================
+-- Proof chaining with @references
+-- ============================================================
+
+-- Use a proved conclusion as a premise
+proof ChainedStep
+  @Barbara
+  every P is Q
+  ∴ every S is Q
+
+-- ============================================================
+-- Reference modifiers
+-- ============================================================
+
+proof ConvExample
+  no M is P
+  every S is M
+  ∴ no S is P
+
+-- Simple conversion: no S is P → no P is S
+proof UseConv
+  @ConvExample conv
+  every Q is S
+  ∴ no Q is P
+
+-- ============================================================
+-- Holes: use ? for unknowns
+-- ============================================================
+
+-- The solver finds valid conclusions
+proof FindConclusion
+  every M is P
+  every S is M
+  ∴ ?
+
+-- Unknown premise
+proof FindPremise
+  ?
+  every S is M
+  ∴ every S is P
+
+-- Unknown term
+proof FindTerm
+  every M is P
+  every ? is M
+  ∴ every ? is P
+
+-- Unknown quantifier
+proof FindQuantifier
+  every M is P
+  every S is M
+  ∴ ? S is P
