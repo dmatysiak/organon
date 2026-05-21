@@ -108,41 +108,6 @@ propositions. The editor will offer code actions to fill them in.
 - **Example presets** — toolbar buttons load sample Syl and TFL proofs.
 - **Save-as** — Cmd/Ctrl+S on an untitled buffer opens a save dialog.
 
-## Project structure
-
-```
-web/
-  index.html            Entry point
-  vite.config.ts        Vite configuration
-  tsconfig.json         TypeScript configuration
-  src/
-    main.ts             Monaco editor setup and UI wiring
-    repl.ts             Interactive REPL (Syl + TFL)
-    env.d.ts            Vite-specific type declarations
-    core/               Ported syl logic (from Haskell src/Organon/Syl/)
-      types.ts          Core types, enums, figure detection
-      tradition.ts      Mood specs, valid mood lists per tradition
-      proposition.ts    Conversions, obversion, contradictory
-      validity.ts       Syllogism validation
-      proof.ts          Reduction proofs to Figure I
-      hole.ts           Constraint solver for holes
-      pretty.ts         Human-readable formatting
-      parser.ts         Recursive descent parser for .syl syntax
-      document.ts       Document-level parser (proof blocks, directives)
-      check.ts          Document checker (diagnostics, hovers, actions)
-      format.ts         Document formatter
-    core/tfl/           Ported TFL logic (from Haskell src/Organon/Tfl/)
-      types.ts          TFL types (signs, terms, statements)
-      parser.ts         Algebraic + English parser
-      document.ts       Document-level parser
-      check.ts          Document checker
-      pretty.ts         Pretty printing
-      validity.ts       Cancellation-based validation
-      format.ts         Document formatter
-      tree.ts           Interactive cancellation tree
-      termtree.ts       Englebretsen term-tree visualization
-```
-
 ## Architecture
 
 The app uses Monaco Editor (the editor component from VS Code) with
