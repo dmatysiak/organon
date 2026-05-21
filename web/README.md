@@ -45,15 +45,8 @@ browsers block ES modules and web workers over `file://`.
 
 ## Deploy
 
-Copy the contents of `dist/` to any static hosting provider:
-
-- GitHub Pages
-- Netlify (drop folder)
-- Vercel (`vercel --prod`)
-- S3 + CloudFront
-- Any web server serving static files
-
-No environment variables or backend services needed.
+Copy the contents of `dist/` to any static hosting provider. No
+environment variables or backend services needed.
 
 ## Usage
 
